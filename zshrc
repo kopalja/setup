@@ -113,9 +113,6 @@ source $ZSH/oh-my-zsh.sh
 #######################################################################################
 
 
-# Enable direnv
-eval "$(direnv hook zsh)"
-
 
 # Accept autosuggestions using Ctrl+Space
 bindkey "^ " autosuggest-execute
