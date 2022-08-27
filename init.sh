@@ -1,4 +1,5 @@
 chsh -s $(which zsh)
+export ZSH=""
 
 rm -rf ~/.oh-my-zsh
 
