@@ -16,5 +16,5 @@ sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.
        https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
 
 cat zshrc >> ~/.zshrc
-cat vimrc >> ~/.vimrc
-cat tmux.conf >> ~/.tmux.conf
+cat vimrc > ~/.vimrc
+cat tmux.conf > ~/.tmux.conf
