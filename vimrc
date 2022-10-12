@@ -62,3 +62,10 @@ let &t_EI = "\e[0 q"
 noremap x "_x
 noremap X "_x
 xnoremap p pgvy
+
+" Scroll faster
+map <C-j> 3j
+map <C-k> 3k
+map <C-h> 2h
+map <C-l> 2l
+
