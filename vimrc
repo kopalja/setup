@@ -1,9 +1,3 @@
-" Install missing plugins
-let data_dir = has('nvim') ? stdpath('data') . '/site' : '~/.vim'
-if empty(glob(data_dir . '/autoload/plug.vim'))
-  silent execute '!curl -fLo '.data_dir.'/autoload/plug.vim --create-dirs  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
-  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
-endif
 
 call plug#begin('~/.config/nvim/plugged')
 Plug 'gruvbox-community/gruvbox'
@@ -63,9 +57,20 @@ noremap x "_x
 noremap X "_x
 xnoremap p pgvy
 
+
 " Scroll faster
-map <C-j> 3j
-map <C-k> 3k
+map <C-j> 2j
+map <C-k> 2k
 map <C-h> 2h
 map <C-l> 2l
 
+" Add new line
+map <C-n> o<C-c>
+map yw yiw
+nmap <C-[> viwp
+
+" Highlight search
+set incsearch
+
+nnoremap n nzz
+nnoremap N Nzz
