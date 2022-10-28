@@ -1,3 +1,4 @@
+
 " Install missing plugins   
 let data_dir = has('nvim') ? stdpath('data') . '/site' : '~/.vim'
 if empty(glob(data_dir . '/autoload/plug.vim'))
@@ -47,6 +48,7 @@ endif
 
 let mapleader=" "
 
+
 " Set system clipboard
 set clipboard=unnamedplus
 
@@ -70,13 +72,30 @@ map <C-k> 2k
 map <C-h> 2h
 map <C-l> 2l
 
-" Add new line
-map <C-n> o<C-c>
-map yw yiw
-nmap <C-[> viwp
+
 
 " Highlight search
 set incsearch
 
+" Jump to next with zz
 nnoremap n nzz
 nnoremap N Nzz
+
+" Yank to end of line
+map Y y$
+map P v$p
+map 0 ^
+
+" Yank/copy/edit words faster
+map <leader>y yiw
+map <leader>Y yiW
+map <leader>p viwp
+map <leader>P viWp
+map <leader>c ciw
+map <leader>C ciW
+
+" Add new line
+map <C-n> o <C-c>
+
+
+
