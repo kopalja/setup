@@ -50,7 +50,7 @@ let mapleader=" "
 
 
 " Set system clipboard
-set clipboard=unnamedplus
+:set clipboard=unnamedplus
 
 " Change cursor in insert mode
 let &t_SI = "\e[5 q"
@@ -81,10 +81,11 @@ set incsearch
 nnoremap n nzz
 nnoremap N Nzz
 
+map 0 ^
+map ) $
 " Yank to end of line
 map Y y$
 map P v$p
-map 0 ^
 
 " Yank/copy/edit words faster
 map <leader>y yiw
@@ -93,6 +94,8 @@ map <leader>p viwp
 map <leader>P viWp
 map <leader>c ciw
 map <leader>C ciW
+map <leader>d diw
+map <leader>D diW
 
 " Add new line
 map <C-n> o <C-c>
@@ -105,3 +108,28 @@ set tabstop=4
 set shiftwidth=4
 set expandtab
 
+ 
+ 
+" CUstom lines comment
+ 
+ " Default comment symbol
+let g:comment_symbol = '#'
+
+" Set comment symbol per filetype
+autocmd FileType python let g:comment_symbol = '#'
+autocmd FileType javascript let g:comment_symbol = '//'
+autocmd FileType c let g:comment_symbol = '//'
+autocmd FileType cpp let g:comment_symbol = '//'
+autocmd FileType html let g:comment_symbol = '<!--'
+autocmd FileType sh let g:comment_symbol = '#'
+" Add more as needed
+     
+" Comment selected lines in visual mode
+" Emulate vscode comment key-binding
+vnoremap <C-_> :<C-u>call CommentLines()<CR>
+ 
+function! CommentLines()
+  let l:symbol = get(g:, 'comment_symbol', '#')
+  execute ":'<,'>s/^/" . escape(l:symbol, '/') . " /"
+endfunction
+ 
