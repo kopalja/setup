@@ -1,5 +1,5 @@
 
-ZSH_THEME="intheloop"
+ZSH_THEME="af-magic"
 ZSH_TMUX_AUTOSTART=true
 ZSH_TMUX_AUTOQUIT=false
 
