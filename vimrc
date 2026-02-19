@@ -8,6 +8,7 @@ endif
 
 call plug#begin('~/.config/nvim/plugged')
 Plug 'gruvbox-community/gruvbox'
+Plug 'ojroques/vim-oscyank'
 call plug#end()
 " -----------------------------------------------------------------------------
 " Color settings
@@ -49,8 +50,18 @@ endif
 let mapleader=" "
 
 
-" Set system clipboard
-set clipboard=unnamed
+
+"==== Using extenstion to make copying work ====
+" vim-oscyank: make ALL yanks go to local (Mac) clipboard via OSC52
+let g:oscyank_max_length = 200000
+
+" Visual yanks -> OSC52
+xmap y <Plug>OSCYankVisual
+
+" Normal yanks (yy, yw, yiw, yG, ...) -> OSC52
+nmap y <Plug>OSCYankOperator
+nmap yy <Plug>OSCYankLine
+"===============================================
 
 " Change cursor in insert mode
 let &t_SI = "\e[5 q"
@@ -110,7 +121,7 @@ set expandtab
 
  
  
-" Custom lines comment
+"=== Custom lines comment ==========================
 " Default comment symbol
 let g:comment_symbol = '#'
 
@@ -144,4 +155,4 @@ function! CommentLineCurrent()
   " prepend comment symbol + space to current line
   execute "s/^/" . escape(l:symbol, '/\') . " /"
 endfunction
-
+"===============================================
