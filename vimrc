@@ -31,8 +31,8 @@ if !exists('g:gruvbox_contrast_light')
   let g:gruvbox_contrast_light='hard'
 endif
 
-" Set the color scheme.
-colorscheme gruvbox
+" Set the color scheme. The plugin may not exist until the first PlugInstall completes.
+silent! colorscheme gruvbox
 set background=dark
 
 " Specific colorscheme settings (must come after setting your colorscheme).

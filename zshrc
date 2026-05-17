@@ -1,11 +1,13 @@
 
-ZSH_THEME="af-magic"
+export ZSH="$HOME/.oh-my-zsh"
+
+ZSH_THEME="powerlevel10k/powerlevel10k"
 ZSH_TMUX_AUTOSTART=true
 ZSH_TMUX_AUTOQUIT=false
 
 plugins=(git tmux docker zsh-autosuggestions copybuffer)
 
-source $ZSH/oh-my-zsh.sh
+source "$ZSH/oh-my-zsh.sh"
 
 # Accept autosuggestions using Ctrl+Space
 bindkey "^@" autosuggest-execute
@@ -20,5 +22,4 @@ bindkey '^[k' up-line-or-search
 bindkey '^[j' down-line-or-search
 bindkey '^[h' backward-char
 bindkey '^[l' forward-char
-
 
