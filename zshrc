@@ -1,7 +1,10 @@
 
 export ZSH="$HOME/.oh-my-zsh"
 
-ZSH_THEME="powerlevel10k/powerlevel10k"
+RPS1=""
+RPROMPT=""
+ZSH_THEME="af-magic"
+
 ZSH_TMUX_AUTOSTART=true
 ZSH_TMUX_AUTOQUIT=false
 
