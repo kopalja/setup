@@ -15,10 +15,8 @@ source "$ZSH/oh-my-zsh.sh"
 # Accept autosuggestions using Ctrl+Space
 bindkey "^@" autosuggest-execute
 
-
 # Remove word with ctrl-backspace
 bindkey '^H' backward-kill-word
-
 
 # Vim like movement
 bindkey '^[k' up-line-or-search
