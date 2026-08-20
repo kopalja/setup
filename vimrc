@@ -1,14 +1,6 @@
-
-" Install missing plugins   
-let data_dir = has('nvim') ? stdpath('data') . '/site' : '~/.vim'
-if empty(glob(data_dir . '/autoload/plug.vim'))
-  silent execute '!curl -fLo '.data_dir.'/autoload/plug.vim --create-dirs  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
-  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC          
-endif
-
-call plug#begin('~/.config/nvim/plugged')
+call plug#begin('~/.vim/plugged')
 Plug 'gruvbox-community/gruvbox'
-Plug 'ojroques/vim-oscyank'
+Plug 'ojroques/vim-oscyank', {'branch': 'main'}
 call plug#end()
 " -----------------------------------------------------------------------------
 " Color settings
@@ -31,12 +23,12 @@ if !exists('g:gruvbox_contrast_light')
   let g:gruvbox_contrast_light='hard'
 endif
 
-" Set the color scheme. The plugin may not exist until the first PlugInstall completes.
+" Set the color scheme installed by the Setup run.
 silent! colorscheme gruvbox
 set background=dark
 
 " Specific colorscheme settings (must come after setting your colorscheme).
-if (g:colors_name == 'gruvbox')
+if exists('g:colors_name') && g:colors_name ==# 'gruvbox'
   if (&background == 'dark')
     hi Visual cterm=NONE ctermfg=NONE ctermbg=237 guibg=#3a3a3a
   else

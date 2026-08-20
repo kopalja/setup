@@ -10,6 +10,7 @@ ZSH_TMUX_AUTOQUIT=false
 
 plugins=(git tmux docker zsh-autosuggestions copybuffer)
 
+zstyle ':omz:update' mode disabled
 source "$ZSH/oh-my-zsh.sh"
 
 # Accept autosuggestions using Ctrl+Space
@@ -23,4 +24,3 @@ bindkey '^[k' up-line-or-search
 bindkey '^[j' down-line-or-search
 bindkey '^[h' backward-char
 bindkey '^[l' forward-char
-
