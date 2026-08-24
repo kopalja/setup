@@ -37,6 +37,8 @@ changes or diverged commits.
 The script is safe to rerun. An unchanged `~/.zshrc`, `~/.vimrc`, or
 `~/.tmux.conf` is left untouched. A changed file or symlink is backed up under
 `~/.setup-backups/` and replaced atomically with an independent copy.
+If `~/.codex` exists, `_AGENTS.md` is installed as `~/.codex/AGENTS.md` with
+the same backup behavior.
 
 To install a different SSH public key into `authorized_keys`, pass it with:
 

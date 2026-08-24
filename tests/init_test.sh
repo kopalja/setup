@@ -281,6 +281,34 @@ test_unchanged_configurations_are_untouched() {
   cleanup_fixture
 }
 
+test_codex_instructions_are_installed_only_when_codex_exists() {
+  local output status
+  setup_fixture
+
+  output="$(run_setup 2>&1)"
+  status=$?
+
+  if ((status != 0)); then
+    fail "setup without Codex succeeds ($output)"
+  elif [[ -e "$TEST_HOME/.codex" ]]; then
+    fail "setup does not create a Codex directory"
+  else
+    mkdir -p "$TEST_HOME/.codex"
+    output="$(run_setup 2>&1)"
+    status=$?
+
+    if ((status != 0)); then
+      fail "setup with Codex succeeds ($output)"
+    elif ! cmp -s "$REPO_DIR/_AGENTS.md" "$TEST_HOME/.codex/AGENTS.md"; then
+      fail "installs Codex instructions"
+    else
+      pass "installs Codex instructions only when Codex exists"
+    fi
+  fi
+
+  cleanup_fixture
+}
+
 test_failed_copy_preserves_existing_configuration() {
   local output status backup_path
   setup_fixture
@@ -500,6 +528,7 @@ test_update_run_refreshes_clean_dependencies
 test_update_run_rejects_modified_dependencies
 test_update_run_rejects_diverged_dependencies
 test_unchanged_configurations_are_untouched
+test_codex_instructions_are_installed_only_when_codex_exists
 test_failed_copy_preserves_existing_configuration
 test_runtime_startup_has_no_dependency_side_effects
 test_installed_vim_configuration_parses

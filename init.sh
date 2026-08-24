@@ -238,6 +238,9 @@ chmod 600 "$HOME/.ssh/authorized_keys"
 deploy_configuration "$SCRIPT_DIR/zshrc" "$HOME/.zshrc"
 deploy_configuration "$SCRIPT_DIR/vimrc" "$HOME/.vimrc"
 deploy_configuration "$SCRIPT_DIR/tmux.conf" "$HOME/.tmux.conf"
+if [ -d "$HOME/.codex" ]; then
+  deploy_configuration "$SCRIPT_DIR/_AGENTS.md" "$HOME/.codex/AGENTS.md"
+fi
 
 ensure_vim_dependencies
 
