@@ -1,17 +1,12 @@
-  # Global working preferences
+  # Global Agent Instructions
 
-  These are default instructions for all projects. Follow repository-local
-  `AGENTS.md` files and documented project conventions when they are more
-  specific.
-
-  ## General preferences
+  ## Core Principles
 
   - Be extremely concise. Sacrifice grammar for concision when appropriate.
   - Don’t overengineer. Prefer simplicity over abstraction.
   - Prefer minimal, targeted changes over broad refactoring.
   - Preserve existing patterns and conventions unless there’s a strong reason not to.
   - Verify the implementation before finishing. Run relevant tests, type checks, or linters when available.
-  - Verify affected behavior when practical (tests, type checks, linting, or equivalent).
   - Don’t make unrelated changes.
   - Don’t add abstractions, dependencies, or configuration unless necessary.
   - If requirements are ambiguous and the ambiguity materially affects the implementation, ask for clarification before proceeding.
