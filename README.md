@@ -14,6 +14,7 @@ together and does not attempt to use `sudo` or a package manager.
 - `zsh`
 - `vim`
 - `tmux`
+- `codex` (optional)
 
 ## Usage
 
