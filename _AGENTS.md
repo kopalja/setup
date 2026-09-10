@@ -1,5 +1,10 @@
   # Global Agent Instructions
 
+  ## User
+  I am a software engineer. I preffer:
+  - Vim over nano
+  - One line bash commands over muplitple lines
+
   ## Core Principles
 
   - **Concision:** Be extremely concise. Sacrifice grammar for concision when appropriate.
