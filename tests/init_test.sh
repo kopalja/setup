@@ -95,7 +95,7 @@ printf "chsh %s\\n" "$*" >>"$SETUP_TEST_LOG"'
 }
 
 setup_fixture() {
-  TEST_SANDBOX="$(mktemp -d)"
+  TEST_SANDBOX="$(mktemp -d "$REPO_DIR/.setup-test.XXXXXX")" || exit 1
   TEST_FAKE_BIN="$TEST_SANDBOX/bin"
   TEST_HOME="$TEST_SANDBOX/home"
   TEST_LOG="$TEST_SANDBOX/commands.log"
@@ -136,7 +136,7 @@ exec /bin/cp "$@"'
 
 test_reports_all_missing_prerequisites() {
   local sandbox fake_bin output status
-  sandbox="$(mktemp -d)"
+  sandbox="$(mktemp -d "$REPO_DIR/.setup-test.XXXXXX")" || exit 1
   fake_bin="$sandbox/bin"
   mkdir -p "$fake_bin"
   ln -s "$(command -v curl)" "$fake_bin/curl"
@@ -390,16 +390,16 @@ test_installed_vim_configuration_parses() {
 test_installed_shell_configurations_parse() {
   local output zsh_status tmux_status socket_name
   setup_fixture
-  socket_name="setup-test-$$-$RANDOM"
+  socket_name="$TEST_SANDBOX/tmux.sock"
 
   run_setup >/dev/null 2>&1
 
   output="$(HOME="$TEST_HOME" "$REAL_ZSH" -n "$TEST_HOME/.zshrc" 2>&1)"
   zsh_status=$?
-  "$REAL_TMUX" -L "$socket_name" -f /dev/null new-session -d
-  output+="$("$REAL_TMUX" -L "$socket_name" source-file "$TEST_HOME/.tmux.conf" 2>&1)"
+  "$REAL_TMUX" -S "$socket_name" -f /dev/null new-session -d
+  output+="$("$REAL_TMUX" -S "$socket_name" source-file "$TEST_HOME/.tmux.conf" 2>&1)"
   tmux_status=$?
-  "$REAL_TMUX" -L "$socket_name" kill-server >/dev/null 2>&1 || true
+  "$REAL_TMUX" -S "$socket_name" kill-server >/dev/null 2>&1 || true
 
   if ((zsh_status != 0)); then
     fail "installed Zsh configuration parses ($output)"
@@ -522,6 +522,39 @@ test_failed_vim_plug_download_leaves_no_partial_installation() {
   cleanup_fixture
 }
 
+test_tmux_helpers_are_installed_and_restored() {
+  local helper output status
+  setup_fixture
+  output="$(run_setup 2>&1)"
+  status=$?
+  if ((status != 0)); then
+    fail "setup installs tmux helpers ($output)"
+  else
+    for helper in tmux-codex-status tmux-next-ready; do
+      if ! cmp -s "$REPO_DIR/$helper" "$TEST_HOME/.local/bin/$helper" || [[ ! -x "$TEST_HOME/.local/bin/$helper" ]]; then
+        fail "installs executable $helper"
+      fi
+    done
+    chmod -x "$TEST_HOME/.local/bin/tmux-codex-status"
+    printf 'old helper\n' >"$TEST_HOME/.local/bin/tmux-next-ready"
+    output="$(run_setup 2>&1)"
+    status=$?
+    if ((status != 0)); then
+      fail "rerun restores tmux helpers ($output)"
+    elif [[ ! -x "$TEST_HOME/.local/bin/tmux-codex-status" ]]; then
+      fail "rerun repairs helper permissions"
+    elif ! cmp -s "$REPO_DIR/tmux-next-ready" "$TEST_HOME/.local/bin/tmux-next-ready"; then
+      fail "rerun updates helper contents"
+    elif ! compgen -G "$TEST_HOME/.setup-backups/*/tmux-next-ready" >/dev/null; then
+      fail "rerun backs up changed helper"
+    else
+      pass "tmux helpers are installed, backed up, and permissions repaired"
+    fi
+  fi
+  cleanup_fixture
+}
+
+test_tmux_helpers_are_installed_and_restored
 test_reports_all_missing_prerequisites
 test_ordinary_setup_run_acquires_only_missing_dependencies
 test_update_run_refreshes_clean_dependencies

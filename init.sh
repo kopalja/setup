@@ -237,6 +237,11 @@ chmod 600 "$HOME/.ssh/authorized_keys"
 
 deploy_configuration "$SCRIPT_DIR/zshrc" "$HOME/.zshrc"
 deploy_configuration "$SCRIPT_DIR/vimrc" "$HOME/.vimrc"
+mkdir -p "$HOME/.local/bin"
+for helper in tmux-codex-status tmux-next-ready; do
+  deploy_configuration "$SCRIPT_DIR/$helper" "$HOME/.local/bin/$helper"
+  chmod 755 "$HOME/.local/bin/$helper"
+done
 deploy_configuration "$SCRIPT_DIR/tmux.conf" "$HOME/.tmux.conf"
 if [ -d "$HOME/.codex" ]; then
   deploy_configuration "$SCRIPT_DIR/_AGENTS.md" "$HOME/.codex/AGENTS.md"

@@ -1,0 +1,24 @@
+#!/bin/sh
+# Called by the status line once per second; stdout stays empty.
+socket=$1
+# Two steps per status interval, maintaining a left-to-right cycle.
+advance_frame() {
+    frame=$(tmux -S "$socket" show-option -gqv @codex-dot-frame)
+    tmux -S "$socket" set-option -g @codex-dot-frame "$(((${frame:-0} + 1) % 3))"
+}
+advance_frame
+tmux -S "$socket" list-windows -a -F '#{window_id} #{?#{E:@codex-working},1,0} #{window_active} #{?@codex-was-working,1,0} #{?@codex-finished,1,0} #{pane_current_command}' |
+while read -r window working active previous finished command; do
+    next=$finished
+    if [ "$command" != codex ] || [ "$working" = 1 ] || [ "$active" = 1 ]; then
+        next=0
+    elif [ "$previous" = 1 ]; then
+        next=1
+    fi
+    if [ "$previous" != "$working" ] || [ "$finished" != "$next" ]; then
+        tmux -S "$socket" set-option -w -t "$window" @codex-was-working "$working" \; \
+            set-option -w -t "$window" @codex-finished "$next"
+    fi
+done
+sleep 0.5
+advance_frame

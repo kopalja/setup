@@ -1,0 +1,14 @@
+#!/bin/sh
+# Select the next green window in this session, wrapping at the end.
+socket=$1
+session=$2
+current=$3
+target=$(tmux -S "$socket" list-windows -t "$session" -F '#{window_index} #{E:@tab-bg}' |
+    awk -v current="$current" '$2 == "#3e6150" && $1 != current {
+        if (first == "") first = $1
+        if ($1 > current) { print $1; found = 1; exit }
+    } END { if (!found && first != "") print first }')
+if [ -n "$target" ]; then
+    tmux -S "$socket" set-option -w -t "$session:$target" @codex-was-working 0 \; \
+        select-window -t "$session:$target"
+fi
