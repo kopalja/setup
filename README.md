@@ -45,7 +45,8 @@ the same backup behavior.
 
 Setup also copies `tmux-codex-status` and `tmux-next-ready` into
 `~/.local/bin/` and makes them executable, with the same backup behavior.
-The tmux status bar shows animated working tabs and green completed tabs;
+The tmux status bar shows a rotating half-filled circle on muted working tabs,
+a gold selected tab and hostname, and green completed tabs;
 prefix + `r` selects the next green tab. This uses Codex's spinner-prefixed
 pane titles and requires no GUI or Codex `notify` setting. The terminal font
 must support Powerline separators. Codex versions that emit different pane
@@ -70,7 +71,9 @@ once.
 
 ```sh
 bash tests/init_test.sh
+python3 tests/tmux_status_test.py
 ```
 
 The tests use temporary home directories and command adapters; they do not
 change the real home directory, login shell, dependencies, or Git checkouts.
+The tmux status tests require Python 3 and tmux and use an isolated tmux server.
