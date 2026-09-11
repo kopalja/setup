@@ -362,6 +362,25 @@ test_runtime_startup_has_no_dependency_side_effects() {
   cleanup_fixture
 }
 
+test_installed_zsh_exposes_local_bin() {
+  local output status
+  setup_fixture
+
+  run_setup >/dev/null 2>&1
+  write_fake_command "$TEST_HOME/.local/bin/codex" 'exit 0'
+
+  output="$(HOME="$TEST_HOME" PATH=/usr/bin:/bin "$REAL_ZSH" -c 'source "$HOME/.zshrc"; command -v codex' 2>&1)"
+  status=$?
+
+  if ((status != 0)); then
+    fail "installed Zsh configuration exposes commands in ~/.local/bin ($output)"
+  else
+    pass "installed Zsh configuration exposes commands in ~/.local/bin"
+  fi
+
+  cleanup_fixture
+}
+
 test_installed_vim_configuration_parses() {
   local output status
   setup_fixture
@@ -564,6 +583,7 @@ test_unchanged_configurations_are_untouched
 test_codex_instructions_are_installed_only_when_codex_exists
 test_failed_copy_preserves_existing_configuration
 test_runtime_startup_has_no_dependency_side_effects
+test_installed_zsh_exposes_local_bin
 test_installed_vim_configuration_parses
 test_installed_shell_configurations_parse
 test_access_key_is_added_once_without_removing_existing_keys
