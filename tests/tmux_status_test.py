@@ -54,7 +54,7 @@ class CompletionTest(unittest.TestCase):
                 self.assertEqual(value("#{?@codex-finished,1,0}"), "0")
                 title("⠋ Session title")
                 self.assertEqual(value("#{@codex-was-working}"), "1")
-                self.assertEqual(value("#{E:@tab-bg}"), "#493e4c")
+                self.assertEqual(value("#{E:@tab-bg}"), "#654b70")
                 self.assertEqual(value("#{E:@active-tab-bg}"), "#ffbf00")
                 self.assertNotIn("◐", value("#{E:@tab-number}"))
                 for frame, dot in enumerate(("◐", "◓", "◑", "◒")):
