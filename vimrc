@@ -6,10 +6,12 @@ call plug#end()
 " Color settings
 " -----------------------------------------------------------------------------
 
-" Use Ghostty's active ANSI palette, including its foreground/background.
-set notermguicolors
 set background=dark
-colorscheme default
+set termguicolors
+let g:gruvbox_contrast_dark = 'hard'
+if filereadable(expand('~/.vim/plugged/gruvbox/colors/gruvbox.vim'))
+  colorscheme gruvbox
+endif
 syntax on
 "----------------------------------------------------------------------
 
