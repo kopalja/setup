@@ -28,6 +28,15 @@ bindkey '^[h' backward-char
 bindkey '^[l' forward-char
 
 
+# Codex shortcuts
+alias c1="codex -c model=gpt-5.6-luna -c model_reasoning_effort=medium"
+alias c2="codex -c model=gpt-5.6-sol -c model_reasoning_effort=medium"
+alias c3="codex -c model=gpt-6-astra -c model_reasoning_effort=low"
+alias c4="codex -c model=gpt-6-astra -c model_reasoning_effort=medium"
+alias cl="codex resume --last"
+
+
+
 # Creating/discarding worktrees
 # ==========================================================================================
 export CODEX_WORKTREE_ROOT="$HOME/.worktrees"
