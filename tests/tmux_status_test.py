@@ -41,6 +41,10 @@ class CompletionTest(unittest.TestCase):
                 tmux("source-file", str(repo / "tmux.conf"))
                 tmux("set-option", "-g", "status-right", "")
                 tmux("set-option", "-g", "remain-on-exit", "on")
+                self.assertEqual(
+                    tmux("show-option", "-gwv", "window-status-bell-style"),
+                    "none",
+                )
                 window = tmux("new-window", "-d", "-P", "-F", "#{window_id}",
                               str(Path(tmp) / "codex") + " 120")
                 for _ in range(100):
@@ -57,6 +61,19 @@ class CompletionTest(unittest.TestCase):
                 self.assertEqual(value("#{E:@tab-bg}"), "#654b70")
                 self.assertEqual(value("#{E:@active-tab-bg}"), "#ffbf00")
                 self.assertNotIn("◐", value("#{E:@tab-number}"))
+                tmux("set-option", "-w", "-t", window, "monitor-bell", "on")
+                tmux("respawn-pane", "-k", "-t", window,
+                     f"sh -c 'printf \"\\\\a\"; exec {Path(tmp) / 'codex'} 120'")
+                for _ in range(100):
+                    if "!" in tmux("display-message", "-p", "-t", window,
+                                   "#{window_flags}"):
+                        break
+                    time.sleep(0.02)
+                self.assertIn("!", tmux("display-message", "-p", "-t", window,
+                                        "#{window_flags}"))
+                self.assertNotIn("!", tmux("display-message", "-p", "-t", window,
+                                           "#{E:@tab-number}"))
+                title("⠋ Session title")
                 for frame, dot in enumerate(("◐", "◓", "◑", "◒")):
                     tmux("set-option", "-g", "@codex-pulse-frame", str(frame))
                     self.assertEqual(value("#{E:@tab-title}"), dot + " Session title")
