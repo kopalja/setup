@@ -281,7 +281,7 @@ test_unchanged_configurations_are_untouched() {
   cleanup_fixture
 }
 
-test_codex_instructions_are_installed_only_when_codex_exists() {
+test_codex_configuration_is_installed_only_when_codex_exists() {
   local output status
   setup_fixture
 
@@ -293,16 +293,18 @@ test_codex_instructions_are_installed_only_when_codex_exists() {
   elif [[ -e "$TEST_HOME/.codex" ]]; then
     fail "setup does not create a Codex directory"
   else
-    mkdir -p "$TEST_HOME/.codex"
+    write_fake_command "$TEST_FAKE_BIN/codex" 'exit 0'
     output="$(run_setup 2>&1)"
     status=$?
 
     if ((status != 0)); then
       fail "setup with Codex succeeds ($output)"
+    elif ! cmp -s "$REPO_DIR/codex_config.toml" "$TEST_HOME/.codex/config.toml"; then
+      fail "installs Codex configuration"
     elif ! cmp -s "$REPO_DIR/_AGENTS.md" "$TEST_HOME/.codex/AGENTS.md"; then
       fail "installs Codex instructions"
     else
-      pass "installs Codex instructions only when Codex exists"
+      pass "installs Codex configuration only when Codex exists"
     fi
   fi
 
@@ -584,7 +586,7 @@ test_update_run_refreshes_clean_dependencies
 test_update_run_rejects_modified_dependencies
 test_update_run_rejects_diverged_dependencies
 test_unchanged_configurations_are_untouched
-test_codex_instructions_are_installed_only_when_codex_exists
+test_codex_configuration_is_installed_only_when_codex_exists
 test_failed_copy_preserves_existing_configuration
 test_runtime_startup_has_no_dependency_side_effects
 test_installed_zsh_exposes_local_bin

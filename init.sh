@@ -243,6 +243,10 @@ for helper in tmux-codex-status tmux-next-ready; do
   chmod 755 "$HOME/.local/bin/$helper"
 done
 deploy_configuration "$SCRIPT_DIR/tmux.conf" "$HOME/.tmux.conf"
+if command -v codex >/dev/null 2>&1; then
+  mkdir -p "$HOME/.codex"
+  deploy_configuration "$SCRIPT_DIR/codex_config.toml" "$HOME/.codex/config.toml"
+fi
 if [ -d "$HOME/.codex" ]; then
   deploy_configuration "$SCRIPT_DIR/_AGENTS.md" "$HOME/.codex/AGENTS.md"
 fi
