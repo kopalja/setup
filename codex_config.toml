@@ -7,7 +7,7 @@ log_dir = "/tmp/codex.logs"
 
 [tui]
 theme = "catppuccin-mocha"
-status_line = ["model-with-reasoning", "current-dir", "git-branch", "context-used"]
+status_line = ["current-dir", "git-branch", "model-with-reasoning", "context-used"]
 status_line_use_colors = true
 whimsy = false
 
