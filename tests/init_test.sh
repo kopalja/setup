@@ -309,6 +309,8 @@ test_codex_and_claude_are_installed_with_configuration() {
     fail "installs Codex instructions"
   elif ! cmp -s "$REPO_DIR/claude_config.json" "$TEST_HOME/.claude/settings.json"; then
     fail "installs Claude configuration"
+  elif ! cmp -s "$REPO_DIR/_CLAUDE.md" "$TEST_HOME/.claude/CLAUDE.md"; then
+    fail "installs global Claude instructions"
   else
     : >"$TEST_LOG"
     run_setup >/dev/null 2>&1
