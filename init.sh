@@ -307,6 +307,7 @@ fi
 if command -v claude >/dev/null 2>&1; then
   mkdir -p "$HOME/.claude"
   deploy_configuration "$SCRIPT_DIR/claude_config.json" "$HOME/.claude/settings.json"
+  deploy_configuration "$SCRIPT_DIR/_CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 fi
 
 ensure_vim_dependencies

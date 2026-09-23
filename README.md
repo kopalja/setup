@@ -47,7 +47,8 @@ If the `codex` command exists, `codex_config.toml` is installed as
 `~/.codex/config.toml`. `_AGENTS.md` is also installed as
 `~/.codex/AGENTS.md`, with the same backup behavior.
 If the `claude` command exists, `claude_config.json` is installed as
-`~/.claude/settings.json`, with the same backup behavior.
+`~/.claude/settings.json` and `_CLAUDE.md` as `~/.claude/CLAUDE.md`, with the
+same backup behavior.
 
 Setup also copies `tmux-codex-status` and `tmux-next-ready` into
 `~/.local/bin/` and makes them executable, with the same backup behavior.
