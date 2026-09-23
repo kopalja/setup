@@ -15,6 +15,8 @@ together and does not attempt to use `sudo` or a package manager.
 - `vim`
 - `tmux`
 - `tar`
+- `codex` (optional)
+- `claude` (optional)
 
 ## Usage
 
