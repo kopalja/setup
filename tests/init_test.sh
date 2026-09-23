@@ -60,6 +60,12 @@ case "$*" in
     chmod +x "$HOME/.oh-my-zsh/tools/upgrade.sh"
     printf "%s\\n" ":"
     ;;
+  *claude.ai/install.sh*)
+    mkdir -p "$HOME/.local/bin"
+    printf "%s\\n" "#!/usr/bin/env bash" "echo claude \"\$*\" >>$SETUP_TEST_LOG" >"$HOME/.local/bin/claude"
+    chmod +x "$HOME/.local/bin/claude"
+    printf "%s\\n" ":"
+    ;;
   *)
     if [[ "${1:-}" == -fLo ]]; then
       mkdir -p "$(dirname -- "$2")"
@@ -88,6 +94,9 @@ printf "vim %s\\n" "$*" >>"$SETUP_TEST_LOG"
 if [[ "$*" == *"PlugInstall"* || "$*" == *"PlugUpdate"* ]]; then
   mkdir -p "$HOME/.vim/plugged/gruvbox/.git" "$HOME/.vim/plugged/vim-oscyank/.git"
 fi'
+  write_fake_command "$fake_bin/tar" '
+printf "tar %s\\n" "$*" >>"$SETUP_TEST_LOG"
+printf "%s\\n" "#!/usr/bin/env bash" "echo codex \"\$*\" >>$SETUP_TEST_LOG" >"${@: -1}/codex-fake"'
   write_fake_command "$fake_bin/zsh" 'exit 0'
   write_fake_command "$fake_bin/tmux" 'exit 0'
   write_fake_command "$fake_bin/chsh" '
@@ -281,31 +290,55 @@ test_unchanged_configurations_are_untouched() {
   cleanup_fixture
 }
 
-test_codex_configuration_is_installed_only_when_codex_exists() {
-  local output status
+test_codex_and_claude_are_installed_with_configuration() {
+  local output status second_log
   setup_fixture
 
   output="$(run_setup 2>&1)"
   status=$?
 
   if ((status != 0)); then
-    fail "setup without Codex succeeds ($output)"
-  elif [[ -e "$TEST_HOME/.codex" ]]; then
-    fail "setup does not create a Codex directory"
+    fail "setup installing Codex and Claude succeeds ($output)"
+  elif [[ ! -x "$TEST_HOME/.local/bin/codex" ]]; then
+    fail "installs Codex into ~/.local/bin"
+  elif [[ ! -x "$TEST_HOME/.local/bin/claude" ]]; then
+    fail "installs Claude Code into ~/.local/bin"
+  elif ! cmp -s "$REPO_DIR/codex_config.toml" "$TEST_HOME/.codex/config.toml"; then
+    fail "installs Codex configuration"
+  elif ! cmp -s "$REPO_DIR/_AGENTS.md" "$TEST_HOME/.codex/AGENTS.md"; then
+    fail "installs Codex instructions"
+  elif ! cmp -s "$REPO_DIR/claude_config.json" "$TEST_HOME/.claude/settings.json"; then
+    fail "installs Claude configuration"
   else
-    write_fake_command "$TEST_FAKE_BIN/codex" 'exit 0'
-    output="$(run_setup 2>&1)"
-    status=$?
-
-    if ((status != 0)); then
-      fail "setup with Codex succeeds ($output)"
-    elif ! cmp -s "$REPO_DIR/codex_config.toml" "$TEST_HOME/.codex/config.toml"; then
-      fail "installs Codex configuration"
-    elif ! cmp -s "$REPO_DIR/_AGENTS.md" "$TEST_HOME/.codex/AGENTS.md"; then
-      fail "installs Codex instructions"
-    else
-      pass "installs Codex configuration only when Codex exists"
+    : >"$TEST_LOG"
+    run_setup >/dev/null 2>&1
+    second_log="$(<"$TEST_LOG")"
+    if assert_not_contains "$second_log" "openai/codex" "rerun does not reinstall Codex" &&
+      assert_not_contains "$second_log" "claude.ai/install.sh" "rerun does not reinstall Claude Code" &&
+      assert_not_contains "$second_log" "claude update" "rerun does not update Claude Code"; then
+      pass "installs Codex and Claude Code with configuration"
     fi
+  fi
+
+  cleanup_fixture
+}
+
+test_update_run_updates_codex_and_claude() {
+  local output status update_log
+  setup_fixture
+
+  run_setup >/dev/null 2>&1
+  : >"$TEST_LOG"
+
+  output="$(run_setup --update 2>&1)"
+  status=$?
+  update_log="$(<"$TEST_LOG")"
+
+  if ((status != 0)); then
+    fail "Update run updates Codex and Claude ($output)"
+  elif assert_contains "$update_log" "openai/codex/releases/latest" "Update run refreshes Codex" &&
+    assert_contains "$update_log" "claude update" "Update run updates Claude Code"; then
+    pass "Update run updates Codex and Claude Code"
   fi
 
   cleanup_fixture
@@ -586,7 +619,8 @@ test_update_run_refreshes_clean_dependencies
 test_update_run_rejects_modified_dependencies
 test_update_run_rejects_diverged_dependencies
 test_unchanged_configurations_are_untouched
-test_codex_configuration_is_installed_only_when_codex_exists
+test_codex_and_claude_are_installed_with_configuration
+test_update_run_updates_codex_and_claude
 test_failed_copy_preserves_existing_configuration
 test_runtime_startup_has_no_dependency_side_effects
 test_installed_zsh_exposes_local_bin

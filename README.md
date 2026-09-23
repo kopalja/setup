@@ -14,7 +14,7 @@ together and does not attempt to use `sudo` or a package manager.
 - `zsh`
 - `vim`
 - `tmux`
-- `codex` (optional)
+- `tar`
 
 ## Usage
 
@@ -40,9 +40,14 @@ changes or diverged commits.
 The script is safe to rerun. An unchanged `~/.zshrc`, `~/.vimrc`, or
 `~/.tmux.conf` is left untouched. A changed file or symlink is backed up under
 `~/.setup-backups/` and replaced atomically with an independent copy.
+Setup installs missing Codex (latest GitHub release binary) and Claude Code
+(native installer) into `~/.local/bin/`. An Update run runs `claude update` and
+refreshes Codex if it lives in `~/.local/bin/`.
 If the `codex` command exists, `codex_config.toml` is installed as
 `~/.codex/config.toml`. `_AGENTS.md` is also installed as
 `~/.codex/AGENTS.md`, with the same backup behavior.
+If the `claude` command exists, `claude_config.json` is installed as
+`~/.claude/settings.json`, with the same backup behavior.
 
 Setup also copies `tmux-codex-status` and `tmux-next-ready` into
 `~/.local/bin/` and makes them executable, with the same backup behavior.

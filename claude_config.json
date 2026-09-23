@@ -1,0 +1,5 @@
+{
+  "theme": "auto",
+  "model": "opus[1m]",
+  "permissions": { "defaultMode": "bypassPermissions" }
+}

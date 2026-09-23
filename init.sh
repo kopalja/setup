@@ -132,6 +132,57 @@ ensure_git_repo() {
   fi
 }
 
+ensure_codex() {
+  local arch target temporary
+
+  if command -v codex >/dev/null 2>&1; then
+    if [ "$UPDATE" != true ] || [ "$(command -v codex)" != "$HOME/.local/bin/codex" ]; then
+      log "Codex already installed at $(command -v codex)"
+      return
+    fi
+  fi
+
+  case "$(uname -m)" in
+    x86_64 | amd64) arch=x86_64 ;;
+    aarch64 | arm64) arch=aarch64 ;;
+    *)
+      warn "unsupported architecture for Codex: $(uname -m)"
+      return
+      ;;
+  esac
+  target="$arch-unknown-linux-musl"
+  if [ "$(uname -s)" = Darwin ]; then
+    target="$arch-apple-darwin"
+  fi
+
+  log "Installing Codex"
+  temporary="$(mktemp -d)"
+  if ! curl -fLo "$temporary/archive.tar.gz" \
+    "https://github.com/openai/codex/releases/latest/download/codex-$target.tar.gz" ||
+    ! tar -xzf "$temporary/archive.tar.gz" -C "$temporary"; then
+    rm -rf "$temporary"
+    return 1
+  fi
+  chmod 755 "$temporary"/codex-*
+  mv -f "$temporary"/codex-* "$HOME/.local/bin/codex"
+  rm -rf "$temporary"
+}
+
+ensure_claude() {
+  if command -v claude >/dev/null 2>&1; then
+    if [ "$UPDATE" = true ]; then
+      log "Updating Claude Code"
+      claude update
+    else
+      log "Claude Code already installed at $(command -v claude)"
+    fi
+    return
+  fi
+
+  log "Installing Claude Code"
+  curl -fsSL https://claude.ai/install.sh | bash
+}
+
 ensure_vim_dependencies() {
   local vim_plug="$HOME/.vim/autoload/plug.vim"
   local plugin_dir
@@ -238,6 +289,9 @@ chmod 600 "$HOME/.ssh/authorized_keys"
 deploy_configuration "$SCRIPT_DIR/zshrc" "$HOME/.zshrc"
 deploy_configuration "$SCRIPT_DIR/vimrc" "$HOME/.vimrc"
 mkdir -p "$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
+ensure_codex
+ensure_claude
 for helper in tmux-codex-status tmux-next-ready; do
   deploy_configuration "$SCRIPT_DIR/$helper" "$HOME/.local/bin/$helper"
   chmod 755 "$HOME/.local/bin/$helper"
@@ -249,6 +303,10 @@ if command -v codex >/dev/null 2>&1; then
 fi
 if [ -d "$HOME/.codex" ]; then
   deploy_configuration "$SCRIPT_DIR/_AGENTS.md" "$HOME/.codex/AGENTS.md"
+fi
+if command -v claude >/dev/null 2>&1; then
+  mkdir -p "$HOME/.claude"
+  deploy_configuration "$SCRIPT_DIR/claude_config.json" "$HOME/.claude/settings.json"
 fi
 
 ensure_vim_dependencies
