@@ -6,6 +6,7 @@ export ZSH="$HOME/.oh-my-zsh"
 RPS1=""
 RPROMPT=""
 ZSH_THEME="af-magic"
+ZSH_DISABLE_COMPFIX=true
 
 ZSH_TMUX_AUTOSTART=true
 ZSH_TMUX_AUTOQUIT=false
