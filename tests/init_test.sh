@@ -394,6 +394,10 @@ test_runtime_startup_has_no_dependency_side_effects() {
     :
   elif ! assert_contains "$vim_config" "colorscheme gruvbox" "Vim uses the Gruvbox color scheme"; then
     :
+  elif ! assert_contains "$vim_config" "autocmd TextYankPost" "Vim copies native yanks via OSC52"; then
+    :
+  elif ! assert_not_contains "$vim_config" "OSCYankLine" "Vim has no broken yy mapping"; then
+    :
   elif ! assert_contains "$zsh_config" "zstyle ':omz:update' mode disabled" "Zsh startup disables Oh My Zsh updates"; then
     :
   elif assert_not_contains "$zsh_config" "powerlevel10k" "Zsh configuration does not use Powerlevel10k"; then

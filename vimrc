@@ -23,12 +23,8 @@ let mapleader=" "
 " vim-oscyank: make ALL yanks go to local (Mac) clipboard via OSC52
 let g:oscyank_max_length = 200000
 
-" Visual yanks -> OSC52
-xmap y <Plug>OSCYankVisual
-
-" Normal yanks (yy, yw, yiw, yG, ...) -> OSC52
-nmap y <Plug>OSCYankOperator
-nmap yy <Plug>OSCYankLine
+" Native yank (keeps p working) + send every yank to OSC52
+autocmd TextYankPost * if v:event.operator ==# "y" && exists("*OSCYank") | call OSCYank(join(v:event.regcontents, "\n")) | endif
 "===============================================
 
 " Change cursor in insert mode
