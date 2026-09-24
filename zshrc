@@ -23,8 +23,8 @@ bindkey "^@" autosuggest-execute
 bindkey '^H' backward-kill-word
 
 # Vim like movement
-bindkey '^[k' up-line-or-search
-bindkey '^[j' down-line-or-search
+bindkey '^[k' up-line-or-history
+bindkey '^[j' down-line-or-history
 bindkey '^[h' backward-char
 bindkey '^[l' forward-char
 
