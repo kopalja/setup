@@ -300,6 +300,7 @@ deploy_configuration "$SCRIPT_DIR/tmux.conf" "$HOME/.tmux.conf"
 if command -v codex >/dev/null 2>&1; then
   mkdir -p "$HOME/.codex"
   deploy_configuration "$SCRIPT_DIR/codex_config.toml" "$HOME/.codex/config.toml"
+  BACKUP_DIR="$BACKUP_DIR" "$SCRIPT_DIR/deploy-skills" "$HOME/.codex/skills"
 fi
 if [ -d "$HOME/.codex" ]; then
   deploy_configuration "$SCRIPT_DIR/_AGENTS.md" "$HOME/.codex/AGENTS.md"
@@ -308,6 +309,7 @@ if command -v claude >/dev/null 2>&1; then
   mkdir -p "$HOME/.claude"
   deploy_configuration "$SCRIPT_DIR/claude_config.json" "$HOME/.claude/settings.json"
   deploy_configuration "$SCRIPT_DIR/_CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+  BACKUP_DIR="$BACKUP_DIR" "$SCRIPT_DIR/deploy-skills" "$HOME/.claude/skills"
 fi
 
 ensure_vim_dependencies

@@ -52,6 +52,35 @@ If the `claude` command exists, `claude_config.json` is installed as
 `~/.claude/settings.json` and `_CLAUDE.md` as `~/.claude/CLAUDE.md`, with the
 same backup behavior.
 
+## Shared agent skills
+
+Put each skill in `skills/<skill-name>/SKILL.md`. Setup installs each skill for
+Codex at `~/.codex/skills/<skill-name>/` and for Claude Code at
+`~/.claude/skills/<skill-name>/` when the corresponding CLI is available.
+Changed skill directories are backed up under `~/.setup-backups/` before they
+are replaced. Keep shared skills provider-neutral so the same instructions
+work in both CLIs.
+
+A skill is a short workflow guide. Its YAML front matter supplies a `name` and
+a `description`; the description should say what the skill does and when to
+use it. Put the step-by-step instructions in the Markdown body. Supporting
+files such as scripts, references, and templates can live next to `SKILL.md`.
+For example, see `skills/setup-maintenance/SKILL.md`.
+
+```markdown
+---
+name: my-workflow
+description: Do a specific task and when to use this workflow.
+---
+
+Explain the steps to follow, what to check, and what the result should include.
+```
+
+Commit the skill directory to share it with this repository's users. Run
+`./deploy-skills` to install or refresh only the skills; `./init` (or
+`./init.sh`) also installs them as part of the full setup. Codex and Claude
+Code discover user skills from their respective skill directories.
+
 Setup also copies `tmux-codex-status` and `tmux-next-ready` into
 `~/.local/bin/` and makes them executable, with the same backup behavior.
 The tmux status bar shows a rotating half-filled circle on muted working tabs,

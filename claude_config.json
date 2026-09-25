@@ -1,5 +1,6 @@
 {
   "theme": "auto",
   "model": "opus[1m]",
+  "tui": "default",
   "permissions": { "defaultMode": "bypassPermissions" }
 }
