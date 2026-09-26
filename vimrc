@@ -9,6 +9,8 @@ call plug#end()
 set background=dark
 set termguicolors
 let g:gruvbox_contrast_dark = 'hard'
+let g:gruvbox_colors = get(g:, 'gruvbox_colors', {})
+let g:gruvbox_colors.dark0_hard = ['#000000', 0]
 if filereadable(expand('~/.vim/plugged/gruvbox/colors/gruvbox.vim'))
   colorscheme gruvbox
 endif
