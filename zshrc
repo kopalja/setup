@@ -36,7 +36,6 @@ alias c3="codex -c model=gpt-6-astra -c model_reasoning_effort=medium"
 alias c4="codex -c model=gpt-6-astra -c model_reasoning_effort=high"
 alias cl="codex resume --last"
 alias cc="claude"
-alias bat=batcat
 
 export EDITOR=/usr/bin/vim
 
@@ -142,7 +141,7 @@ fuzzy-open() {
       --height=70% \
       --tmux=center,80%,80% \
       --layout=default \
-      --preview='if [ -d {} ]; then ls -la {}; else (bat --style=numbers --color=always --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
+      --preview='if [ -d {} ]; then ls -la {}; else (batca --style=numbers --color=always --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
       --preview-window='right:45%:wrap' \
       --prompt='❯ ' < /dev/tty)
     if [[ -n "$selected" ]]; then
