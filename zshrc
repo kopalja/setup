@@ -186,5 +186,5 @@ fuzzy-content-open() {
     fi
 }
 zle -N fuzzy-content-open
-bindkey '^[^P' fuzzy-content-open
+bindkey '^G' fuzzy-content-open
 # ==========================================================================================
