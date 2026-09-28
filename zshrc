@@ -36,6 +36,7 @@ alias c3="codex -c model=gpt-6-astra -c model_reasoning_effort=medium"
 alias c4="codex -c model=gpt-6-astra -c model_reasoning_effort=high"
 alias cl="codex resume --last"
 alias cc="claude"
+alias bat=batcat
 
 export EDITOR=/usr/bin/vim
 
