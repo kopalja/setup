@@ -143,7 +143,7 @@ fuzzy-open() {
       --layout=default \
       --preview='if [ -d {} ]; then ls -la {}; else (bat --style=numbers --color=always --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
       --preview-window='right:45%:wrap' \
-      --prompt='Open: ' < /dev/tty)
+      --prompt='❯ ' < /dev/tty)
     if [[ -n "$selected" ]]; then
       if [[ -d "$selected" ]]; then
         BUFFER="cd -- ${(q)selected}"
@@ -156,5 +156,5 @@ fuzzy-open() {
     fi
 }
 zle -N fuzzy-open
-bindkey '^O' fuzzy-open
+bindkey '^P' fuzzy-open
 # ==========================================================================================
