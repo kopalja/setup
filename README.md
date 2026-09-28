@@ -9,7 +9,7 @@ Install the required packages before running the setup (`bat` adds highlighted
 file previews):
 
 ```sh
-sudo apt install bash ca-certificates curl git zsh vim tmux tar fzf bat
+sudo apt install ca-certificates curl git zsh vim tmux tar fzf bat
 ```
 
 Prerequisites:
