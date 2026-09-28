@@ -5,18 +5,25 @@ machine reached over SSH. Raspberry Pi OS is supported.
 
 ## Prerequisites
 
-Install these before running the setup. The script reports every missing command
-together and does not attempt to use `sudo` or a package manager.
+Install the required packages before running the setup (`bat` adds highlighted
+file previews):
 
-- `bash`
-- `curl`
-- `git`
-- `zsh`
-- `vim`
-- `tmux`
-- `tar`
-- `codex` (optional)
-- `claude` (optional)
+```sh
+sudo apt install bash ca-certificates curl git zsh vim tmux tar fzf bat
+```
+
+Prerequisites:
+
+- `bash`, `curl`, `git`, `zsh`, `vim`, `tmux`, `tar`
+- `fzf` 0.48 or newer
+- `bat` (optional, for highlighted previews)
+- `codex` and `claude` (optional)
+
+The fuzzy picker needs `fzf` 0.48 or newer. Debian 12
+[packages 0.38](https://packages.debian.org/bookworm/utils/fzf), so install a
+newer [fzf release](https://github.com/junegunn/fzf/releases) on that system.
+The script reports missing commands together and does not use `sudo` or a package
+manager.
 
 ## Usage
 

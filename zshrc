@@ -23,8 +23,8 @@ bindkey "^@" autosuggest-execute
 bindkey '^H' backward-kill-word
 
 # Vim like movement
-bindkey '^[k' up-line-or-history
-bindkey '^[j' down-line-or-history
+bindkey '^K' up-line-or-history
+bindkey '^J' down-line-or-history
 bindkey '^[h' backward-char
 bindkey '^[l' forward-char
 
@@ -129,3 +129,32 @@ cwt-discard() {
 }
 # ==========================================================================================
 
+# ===Fuzzy file and folde search===========================================================
+fuzzy-open() {
+    local selected
+    selected=$(FZF_DEFAULT_COMMAND='' fzf \
+      --walker=file,dir,hidden \
+      --walker-skip=.git,.venv,.pyenv,.cache,.oh-my-zsh,.vs-code,.config,Library,node_modules \
+      --walker-root="$HOME" \
+      --tiebreak=length \
+      --no-multi \
+      --height=70% \
+      --tmux=center,80%,80% \
+      --layout=default \
+      --preview='if [ -d {} ]; then ls -la {}; else (bat --style=numbers --color=always --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
+      --preview-window='right:45%:wrap' \
+      --prompt='Open: ' < /dev/tty)
+    if [[ -n "$selected" ]]; then
+      if [[ -d "$selected" ]]; then
+        BUFFER="cd -- ${(q)selected}"
+      else
+        BUFFER="vim -- ${(q)selected}"
+      fi
+      zle accept-line
+    else
+      zle reset-prompt
+    fi
+}
+zle -N fuzzy-open
+bindkey '^O' fuzzy-open
+# ==========================================================================================
