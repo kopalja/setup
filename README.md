@@ -9,13 +9,14 @@ Install the required packages before running the setup (`bat` adds highlighted
 file previews):
 
 ```sh
-sudo apt install ca-certificates curl git zsh vim tmux tar fzf bat
+sudo apt install ca-certificates curl git zsh vim tmux tar fzf bat ripgrep
 ```
 
 Prerequisites:
 
 - `bash`, `curl`, `git`, `zsh`, `vim`, `tmux`, `tar`
 - `fzf` 0.48 or newer
+- `rg` (ripgrep, for file content search)
 - `bat` (optional, for highlighted previews)
 - `codex` and `claude` (optional)
 

@@ -136,6 +136,8 @@ fuzzy-open() {
       --walker=file,dir,hidden \
       --walker-skip=.git,.venv,.pyenv,.cache,.oh-my-zsh,.vs-code,.config,.vscode-server,.tmp,Library,node_modules \
       --walker-root="$HOME" \
+      --delimiter="^$HOME/" \
+      --with-nth='~/{2..}' \
       --tiebreak=length \
       --no-multi \
       --height=70% \
@@ -157,4 +159,32 @@ fuzzy-open() {
 }
 zle -N fuzzy-open
 bindkey '^P' fuzzy-open
+
+fuzzy-content-open() {
+    local selected file line
+    selected=$(FZF_DEFAULT_COMMAND='' fzf \
+      --ansi \
+      --disabled \
+      --no-sort \
+      --delimiter="^$HOME/|:" \
+      --with-nth='~/{2..}' \
+      --no-multi \
+      --height=70% \
+      --tmux=center,80%,80% \
+      --layout=default \
+      --preview='bat --style=numbers --color=always --theme=gruvbox-dark --highlight-line {3} "$HOME"/{2} 2>/dev/null || head -n 120 "$HOME"/{2}' \
+      --preview-window='right:50%:wrap:+{3}' \
+      --prompt='❯ ' \
+      --bind='change:reload:test -n {q} && rg --sort path --line-number --no-heading --smart-case --glob="!.*" --glob="!{Library,node_modules}" -- {q} "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME" || true' < /dev/tty)
+    if [[ -n "$selected" ]]; then
+      file=${selected%%:*}
+      line=${${selected#*:}%%:*}
+      BUFFER="vim +$line -- ${(q)file}"
+      zle accept-line
+    else
+      zle reset-prompt
+    fi
+}
+zle -N fuzzy-content-open
+bindkey '^[^P' fuzzy-content-open
 # ==========================================================================================
