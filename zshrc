@@ -134,7 +134,7 @@ fuzzy-open() {
     local selected
     selected=$(FZF_DEFAULT_COMMAND='' fzf \
       --walker=file,dir,hidden \
-      --walker-skip=.git,.venv,.pyenv,.cache,.oh-my-zsh,.vs-code,.config,Library,node_modules \
+      --walker-skip=.git,.venv,.pyenv,.cache,.oh-my-zsh,.vs-code,.config,.vscode-server,.tmp,Library,node_modules \
       --walker-root="$HOME" \
       --tiebreak=length \
       --no-multi \
