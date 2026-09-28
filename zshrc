@@ -141,7 +141,7 @@ fuzzy-open() {
       --tiebreak=length \
       --no-multi \
       --height=70% \
-      --tmux=center,80%,80% \
+      --tmux=center,90%,90% \
       --layout=default \
       --preview='if [ -d {} ]; then ls -la {}; else (batcat --style=numbers --color=always --theme=gruvbox-dark --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
       --preview-window='right:50%:wrap' \
@@ -170,7 +170,7 @@ fuzzy-content-open() {
       --with-nth='~/{2..}' \
       --no-multi \
       --height=70% \
-      --tmux=center,80%,80% \
+      --tmux=center,90%,90% \
       --layout=default \
       --preview='batcat --style=numbers --color=always --theme=gruvbox-dark --highlight-line {3} "$HOME"/{2} 2>/dev/null || head -n 120 "$HOME"/{2}' \
       --preview-window='right:50%:wrap:+{3}/2' \
