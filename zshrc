@@ -173,7 +173,7 @@ fuzzy-content-open() {
       --tmux=center,80%,80% \
       --layout=default \
       --preview='batcat --style=numbers --color=always --theme=gruvbox-dark --highlight-line {3} "$HOME"/{2} 2>/dev/null || head -n 120 "$HOME"/{2}' \
-      --preview-window='right:50%:wrap:+{3}' \
+      --preview-window='right:50%:wrap:+{3}/2' \
       --prompt='❯ ' \
       --bind='change:reload:test -n {q} && rg --sort path --line-number --no-heading --smart-case --glob="!.*" --glob="!{Library,node_modules}" -- {q} "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME" || true' < /dev/tty)
     if [[ -n "$selected" ]]; then
