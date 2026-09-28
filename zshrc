@@ -141,7 +141,7 @@ fuzzy-open() {
       --height=70% \
       --tmux=center,80%,80% \
       --layout=default \
-      --preview='if [ -d {} ]; then ls -la {}; else (batca --style=numbers --color=always --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
+      --preview='if [ -d {} ]; then ls -la {}; else (batcat --style=numbers --color=always --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
       --preview-window='right:45%:wrap' \
       --prompt='❯ ' < /dev/tty)
     if [[ -n "$selected" ]]; then
