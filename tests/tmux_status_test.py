@@ -1,4 +1,5 @@
 """Exercise completion tracking in an isolated tmux server."""
+import json
 import os
 from pathlib import Path
 import shutil
@@ -141,6 +142,70 @@ class CompletionTest(unittest.TestCase):
                 tmux("set-option", "-w", "-t", "other:", "@codex-finished", "1")
                 jump()
                 self.assertEqual(selected(), window)
+            finally:
+                subprocess.run(["tmux", "-S", socket, "kill-server"], env=env,
+                               capture_output=True)
+
+    def test_claude_hooks(self):
+        repo = Path(__file__).resolve().parents[1]
+        hooks = json.loads((repo / "claude_config.json").read_text())["hooks"]
+        with tempfile.TemporaryDirectory(prefix="tmux-test-", dir=Path.home()) as tmp:
+            socket = str(Path(tmp) / "socket")
+            env = {k: v for k, v in os.environ.items() if k != "TMUX"}
+
+            def tmux(*args):
+                return subprocess.check_output(
+                    ["tmux", "-S", socket, *args], env=env, text=True
+                ).strip()
+
+            def value(fmt):
+                return tmux("display-message", "-p", "-t", window, fmt)
+
+            def hook(event):
+                # Run the configured hook as Claude Code would inside the pane.
+                for group in hooks[event]:
+                    for entry in group["hooks"]:
+                        subprocess.run(entry["command"], shell=True, check=True,
+                                       env={**env, "TMUX": socket + ",0,0",
+                                            "TMUX_PANE": pane})
+                subprocess.run([str(repo / "tmux-codex-status"), socket],
+                               env=env, check=True, capture_output=True)
+                tmux("set-option", "-g", "@codex-pulse-frame", "0")
+
+            try:
+                tmux("-f", "/dev/null", "new-session", "-d", "-s", "test")
+                tmux("source-file", str(repo / "tmux.conf"))
+                tmux("set-option", "-g", "status-right", "")
+                name = "shell"
+                window = tmux("new-window", "-d", "-n", name, "-P", "-F", "#{window_id}")
+                pane = value("#{pane_id}")
+                tmux("select-pane", "-t", window, "-T", "✳ Fix bug")
+                self.assertEqual(value("#{E:@tab-title}"), name)
+
+                hook("SessionStart")
+                self.assertEqual(value("#{E:@tab-title}"), "Fix bug")
+                self.assertEqual(value("#{E:@tab-bg}"), "#444444")
+                hook("UserPromptSubmit")
+                self.assertEqual(value("#{E:@tab-bg}"), "#654b70")
+                self.assertEqual(value("#{E:@tab-title}"), "◐ Fix bug")
+                # Waiting on a permission prompt needs attention; approval resumes work.
+                hook("Notification")
+                self.assertEqual(value("#{@codex-finished}"), "1")
+                self.assertEqual(value("#{E:@tab-bg}"), "#3e6150")
+                hook("PostToolUse")
+                self.assertEqual(value("#{@codex-finished}"), "0")
+                self.assertEqual(value("#{E:@tab-bg}"), "#654b70")
+                hook("Stop")
+                self.assertEqual(value("#{@codex-finished}"), "1")
+                self.assertEqual(value("#{E:@tab-bg}"), "#3e6150")
+                self.assertEqual(value("#{E:@tab-title}"), "Fix bug")
+
+                tmux("select-window", "-t", window)
+                self.assertEqual(value("#{@codex-finished}"), "0")
+                tmux("select-window", "-t", "test:0")
+                hook("SessionEnd")
+                self.assertEqual(value("#{E:@tab-title}"), name)
+                self.assertEqual(value("#{E:@tab-bg}"), "#444444")
             finally:
                 subprocess.run(["tmux", "-S", socket, "kill-server"], env=env,
                                capture_output=True)
