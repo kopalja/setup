@@ -97,6 +97,9 @@ prefix + `r` selects the next green tab. This uses Codex's spinner-prefixed
 pane titles and requires no GUI or Codex `notify` setting. The terminal font
 must support Powerline separators. Codex versions that emit different pane
 titles may require updating the detection in `tmux.conf`.
+Claude Code tabs behave the same way: the hooks in `claude_config.json` set
+the `@claude-working` tmux pane option (1 while working, 0 when done or
+waiting for input). Claude Code shows its session topic as the tab title.
 
 For an already-running tmux server, reload after setup:
 

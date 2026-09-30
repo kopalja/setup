@@ -7,10 +7,10 @@ advance_frame() {
     tmux -S "$socket" set-option -g @codex-pulse-frame "$(((${frame:-0} + 1) % 4))"
 }
 advance_frame
-tmux -S "$socket" list-windows -a -F '#{window_id} #{?#{E:@codex-working},1,0} #{window_active} #{?@codex-was-working,1,0} #{?@codex-finished,1,0} #{pane_current_command}' |
-while read -r window working active previous finished command; do
+tmux -S "$socket" list-windows -a -F '#{window_id} #{?#{E:@codex-working},1,0} #{window_active} #{?@codex-was-working,1,0} #{?@codex-finished,1,0} #{?#{||:#{==:#{pane_current_command},codex},#{E:@claude-pane}},1,0}' |
+while read -r window working active previous finished agent; do
     next=$finished
-    if [ "$command" != codex ] || [ "$working" = 1 ] || [ "$active" = 1 ]; then
+    if [ "$agent" != 1 ] || [ "$working" = 1 ] || [ "$active" = 1 ]; then
         next=0
     elif [ "$previous" = 1 ]; then
         next=1
