@@ -9,7 +9,7 @@ Install the required packages before running the setup (`bat` adds highlighted
 file previews):
 
 ```sh
-sudo apt install ca-certificates curl git zsh vim tmux tar fzf bat ripgrep
+sudo apt install ca-certificates curl git zsh vim tmux tar fzf bat ripgrep jq
 ```
 
 Prerequisites:
@@ -17,6 +17,7 @@ Prerequisites:
 - `bash`, `curl`, `git`, `zsh`, `vim`, `tmux`, `tar`
 - `fzf` 0.48 or newer
 - `rg` (ripgrep, for file content search)
+- `jq` (for the Claude Code status line)
 - `bat` (optional, for highlighted previews)
 - `codex` and `claude` (optional)
 
