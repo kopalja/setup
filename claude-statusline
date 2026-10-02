@@ -1,0 +1,17 @@
+#!/bin/sh
+# Claude Code status line: dir · git branch · model effort · context used.
+# Reads the status JSON from stdin.
+jq -r '(.workspace.current_dir // .cwd), .model.display_name, (.effort.level // ""),
+    (.context_window.used_percentage // 0 | round)' | {
+    read -r dir
+    read -r model
+    read -r effort
+    read -r used
+    branch=$(git --no-optional-locks -C "$dir" branch --show-current 2>/dev/null)
+    case $dir in "$HOME" | "$HOME"/*) dir="~${dir#"$HOME"}" ;; esac
+    e=$(printf '\033')
+    sep="$e[2m · $e[0m"
+    printf '%s' "$e[36m$dir$e[0m"
+    [ -n "$branch" ] && printf '%s' "$sep$e[32m$branch$e[0m"
+    printf '%s\n' "$sep$e[33m$model${effort:+ $effort}$e[0m$sep$e[35mContext $used% used$e[0m"
+}

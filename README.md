@@ -89,8 +89,10 @@ Commit the skill directory to share it with this repository's users. Run
 `./init.sh`) also installs them as part of the full setup. Codex and Claude
 Code discover user skills from their respective skill directories.
 
-Setup also copies `tmux-codex-status` and `tmux-next-ready` into
-`~/.local/bin/` and makes them executable, with the same backup behavior.
+Setup also copies `tmux-codex-status`, `tmux-next-ready`, and `claude-statusline`
+into `~/.local/bin/` and makes them executable, with the same backup behavior.
+`claude-statusline` (requires `jq`) is the Claude Code status line: current dir,
+Git branch, model with reasoning effort, and context used, like Codex's.
 The tmux status bar shows a rotating half-filled circle on muted working tabs,
 a gold selected tab and hostname, and green completed tabs;
 prefix + `r` selects the next green tab. This uses Codex's spinner-prefixed
@@ -121,6 +123,7 @@ once.
 ```sh
 bash tests/init_test.sh
 python3 tests/tmux_status_test.py
+python3 tests/claude_statusline_test.py
 ```
 
 The tests use temporary home directories and command adapters; they do not

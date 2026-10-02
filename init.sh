@@ -292,7 +292,7 @@ mkdir -p "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 ensure_codex
 ensure_claude
-for helper in tmux-codex-status tmux-next-ready; do
+for helper in tmux-codex-status tmux-next-ready claude-statusline; do
   deploy_configuration "$SCRIPT_DIR/$helper" "$HOME/.local/bin/$helper"
   chmod 755 "$HOME/.local/bin/$helper"
 done

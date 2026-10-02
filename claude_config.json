@@ -1,6 +1,7 @@
 {
   "theme": "auto",
   "model": "opus[1m]",
+  "statusLine": { "type": "command", "command": "~/.local/bin/claude-statusline" },
   "permissions": { "defaultMode": "bypassPermissions" },
   "skipDangerousModePermissionPrompt": true,
   "hooks": {
