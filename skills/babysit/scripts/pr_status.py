@@ -2,16 +2,15 @@
 """Report what a GitHub PR still needs before it can merge; optionally wait for reviews.
 
 Stateless: everything is derived from GitHub, so it is safe to rerun at any time.
-A review thread is handled when its last comment is ours and ends with REPLY_MARKER. A top-level
-comment or review is handled when its `handle` (id@body-hash, so edits reopen it) is listed in a
-comment of ours that ends with `<!-- babysit handled: <handle> <handle> -->`. "Ours" means written
-by the authenticated gh user.
+A comment or review is handled when its `handle` (id@body-hash, so edits reopen it) is listed in a
+comment of ours that ends with `<!-- babysit handled: <handle> <handle> -->`: a PR comment for
+top-level items, a thread reply for inline ones. "Ours" means written by the authenticated gh user.
 
 Only the user, repo owners, members and collaborators (plus --trust logins) count as reviewers.
 Other authors are listed under `untrusted` and never block or drive the loop.
 
-Reviews of the head commit are top-level comments or reviews that mention its sha (for example
-"Commit: `<sha>`"). Once the expected number has arrived, there is no need to wait for the deadline.
+Reviews of the head commit are trusted top-level comments or reviews containing
+"Commit: `<full head sha>`". Once the expected number has arrived, there is no need to wait for the deadline.
 """
 import argparse
 import hashlib
@@ -22,7 +21,6 @@ import subprocess
 import time
 from urllib.parse import quote
 
-REPLY_MARKER = "<!-- babysit -->"
 HANDLED = re.compile(r"<!-- babysit handled:([^>]*)-->\s*$")
 FAILED = {"FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
 PENDING = {"PENDING", "EXPECTED", None}
@@ -35,8 +33,8 @@ query($owner: String!, $repo: String!, $number: Int!, $after: String) {
         pageInfo { hasNextPage endCursor }
         nodes {
           id isResolved isOutdated path line
-          first: comments(first: 1) { nodes { author { login } authorAssociation body url viewerDidAuthor } }
-          comments(last: 20) { nodes { author { login } authorAssociation body url viewerDidAuthor } }
+          first: comments(first: 1) { nodes { id author { login } authorAssociation body url viewerDidAuthor } }
+          comments(last: 100) { nodes { id author { login } authorAssociation body url viewerDidAuthor } }
         }
       }
     }
@@ -101,23 +99,26 @@ def handle(node):
 
 def thread_comments(thread):
     first, last = thread["first"]["nodes"], thread["comments"]["nodes"]
-    return first + [c for c in last if c["url"] not in {f["url"] for f in first}]
+    return first + [c for c in last if c["id"] not in {f["id"] for f in first}]
 
 
 def is_trusted(node, trust):
     return node.get("viewerDidAuthor") or node.get("authorAssociation") in TRUSTED or login(node) in trust
 
 
-def is_answer(node):
-    return node.get("viewerDidAuthor") and node["body"].rstrip().endswith(REPLY_MARKER)
+def is_marker(node):
+    return node.get("viewerDidAuthor") and handled_ids(node["body"]) is not None
 
 
-def thread_pending(thread, trust):
-    """Unanswered trusted feedback; a reply after our answer counts even if the thread was resolved."""
-    relevant = [c for c in thread_comments(thread) if is_trusted(c, trust)]
-    if not relevant or is_answer(relevant[-1]):
-        return False
-    return not thread["isResolved"] or any(map(is_answer, relevant))
+def thread_status(thread, trust, handled):
+    """"pending", "untrusted" or None. Resolved threads only count once we have answered them."""
+    comments = thread_comments(thread)
+    if thread["isResolved"] and not any(map(is_marker, comments)):
+        return None
+    unhandled = [c for c in comments if not is_marker(c) and handle(c) not in handled]
+    if any(is_trusted(c, trust) for c in unhandled):
+        return "pending"
+    return "untrusted" if unhandled else None
 
 
 def review_deadline(pushed, every, grace, margin=60):
@@ -131,9 +132,10 @@ def review_deadline(pushed, every, grace, margin=60):
 
 
 def evaluate(view, threads, pushed, now, deadline, source="activity", expected_reviews=2, trust=()):
-    summaries = [c for c in view["comments"] if c.get("viewerDidAuthor") and handled_ids(c["body"]) is not None]
+    summaries = [c for c in view["comments"] if is_marker(c)]
     summary_ids = {c["id"] for c in summaries}
-    handled = {i for c in summaries for i in handled_ids(c["body"])}
+    replies = [c for t in threads for c in thread_comments(t) if is_marker(c)]
+    handled = {i for c in summaries + replies for i in handled_ids(c["body"])}
     items = [
         {"handle": handle(c), "kind": "comment", "author": login(c), "body": c["body"], "url": c.get("url"),
          "at": c["createdAt"]}
@@ -146,15 +148,17 @@ def evaluate(view, threads, pushed, now, deadline, source="activity", expected_r
     nodes = {handle(n): n for n in view["comments"] + view["reviews"]}
     top_level = [i for i in items if is_trusted(nodes[i["handle"]], trust)]
     untrusted = [i for i in items if i not in top_level]
-    head = view["headRefOid"][:7]
-    head_reviews = sum(head in n["body"] for n in view["comments"] + view["reviews"]
+    reviewed = re.compile(r"Commit:\s*`?" + view["headRefOid"])
+    head_reviews = sum(bool(reviewed.search(n["body"])) for n in view["comments"] + view["reviews"]
                        if n["id"] not in summary_ids and is_trusted(n, trust))
-    pending_threads = [
-        {"thread_id": t["id"], "path": t["path"], "line": t["line"], "outdated": t["isOutdated"],
-         "comments": [{"author": login(c), "trusted": bool(is_trusted(c, trust)), "body": c["body"], "url": c["url"]}
-                      for c in thread_comments(t)]}
-        for t in threads if thread_pending(t, trust)
-    ]
+    pending_threads = []
+    for t in threads:
+        status = thread_status(t, trust, handled)
+        if status:
+            item = {"thread_id": t["id"], "path": t["path"], "line": t["line"], "outdated": t["isOutdated"],
+                    "comments": [{"handle": handle(c), "author": login(c), "trusted": bool(is_trusted(c, trust)),
+                                  "body": c["body"], "url": c["url"]} for c in thread_comments(t)]}
+            (pending_threads if status == "pending" else untrusted).append(item)
 
     failed, pending = [], []
     for check in view["statusCheckRollup"] or []:
@@ -224,15 +228,15 @@ def main():
                               set(filter(None, args.trust.split(","))))
             if not args.wait or report["state"] != "WAITING":
                 break
-        except subprocess.TimeoutExpired:
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
             if not args.wait:
                 raise
-            report = None  # gh hung: retry on the next poll
+            # Transient gh failure or hang: keep the last report and retry on the next poll.
         if time.monotonic() - start + args.interval > args.max_wait:
             break
         time.sleep(args.interval)
     if report is None:
-        raise SystemExit("gh timed out; rerun the script")
+        raise SystemExit("gh kept failing; rerun the script")
     print(json.dumps(report, indent=2))
 
 
