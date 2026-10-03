@@ -6,6 +6,12 @@ A review thread is handled when its last comment is ours and ends with REPLY_MAR
 comment or review is handled when its `handle` (id@body-hash, so edits reopen it) is listed in a
 comment of ours that ends with `<!-- babysit handled: <handle> <handle> -->`. "Ours" means written
 by the authenticated gh user.
+
+Only the user, repo owners, members and collaborators (plus --trust logins) count as reviewers.
+Other authors are listed under `untrusted` and never block or drive the loop.
+
+Reviews of the head commit are top-level comments or reviews that mention its sha (for example
+"Commit: `<sha>`"). Once the expected number has arrived, there is no need to wait for the deadline.
 """
 import argparse
 import hashlib
@@ -20,6 +26,7 @@ REPLY_MARKER = "<!-- babysit -->"
 HANDLED = re.compile(r"<!-- babysit handled:([^>]*)-->\s*$")
 FAILED = {"FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
 PENDING = {"PENDING", "EXPECTED", None}
+TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
 THREADS_QUERY = """
 query($owner: String!, $repo: String!, $number: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
@@ -28,8 +35,8 @@ query($owner: String!, $repo: String!, $number: Int!, $after: String) {
         pageInfo { hasNextPage endCursor }
         nodes {
           id isResolved isOutdated path line
-          first: comments(first: 1) { nodes { author { login } body url viewerDidAuthor } }
-          comments(last: 20) { nodes { author { login } body url viewerDidAuthor } }
+          first: comments(first: 1) { nodes { author { login } authorAssociation body url viewerDidAuthor } }
+          comments(last: 20) { nodes { author { login } authorAssociation body url viewerDidAuthor } }
         }
       }
     }
@@ -38,7 +45,7 @@ query($owner: String!, $repo: String!, $number: Int!, $after: String) {
 
 
 def gh(*args):
-    return subprocess.run(["gh", *args], check=True, capture_output=True, text=True).stdout
+    return subprocess.run(["gh", *args], check=True, capture_output=True, text=True, timeout=60).stdout
 
 
 def parse_time(value):
@@ -97,9 +104,20 @@ def thread_comments(thread):
     return first + [c for c in last if c["url"] not in {f["url"] for f in first}]
 
 
-def is_answered(thread):
-    last = thread["comments"]["nodes"][-1:]
-    return bool(last) and last[0].get("viewerDidAuthor") and last[0]["body"].rstrip().endswith(REPLY_MARKER)
+def is_trusted(node, trust):
+    return node.get("viewerDidAuthor") or node.get("authorAssociation") in TRUSTED or login(node) in trust
+
+
+def is_answer(node):
+    return node.get("viewerDidAuthor") and node["body"].rstrip().endswith(REPLY_MARKER)
+
+
+def thread_pending(thread, trust):
+    """Unanswered trusted feedback; a reply after our answer counts even if the thread was resolved."""
+    relevant = [c for c in thread_comments(thread) if is_trusted(c, trust)]
+    if not relevant or is_answer(relevant[-1]):
+        return False
+    return not thread["isResolved"] or any(map(is_answer, relevant))
 
 
 def review_deadline(pushed, every, grace, margin=60):
@@ -112,11 +130,11 @@ def review_deadline(pushed, every, grace, margin=60):
     return datetime.fromtimestamp(run, timezone.utc) + timedelta(seconds=grace)
 
 
-def evaluate(view, threads, pushed, now, deadline, source="activity"):
+def evaluate(view, threads, pushed, now, deadline, source="activity", expected_reviews=2, trust=()):
     summaries = [c for c in view["comments"] if c.get("viewerDidAuthor") and handled_ids(c["body"]) is not None]
     summary_ids = {c["id"] for c in summaries}
     handled = {i for c in summaries for i in handled_ids(c["body"])}
-    top_level = [
+    items = [
         {"handle": handle(c), "kind": "comment", "author": login(c), "body": c["body"], "url": c.get("url"),
          "at": c["createdAt"]}
         for c in view["comments"] if c["id"] not in summary_ids and handle(c) not in handled
@@ -125,10 +143,17 @@ def evaluate(view, threads, pushed, now, deadline, source="activity"):
          "at": r.get("submittedAt")}
         for r in view["reviews"] if r["body"].strip() and handle(r) not in handled
     ]
+    nodes = {handle(n): n for n in view["comments"] + view["reviews"]}
+    top_level = [i for i in items if is_trusted(nodes[i["handle"]], trust)]
+    untrusted = [i for i in items if i not in top_level]
+    head = view["headRefOid"][:7]
+    head_reviews = sum(head in n["body"] for n in view["comments"] + view["reviews"]
+                       if n["id"] not in summary_ids and is_trusted(n, trust))
     pending_threads = [
         {"thread_id": t["id"], "path": t["path"], "line": t["line"], "outdated": t["isOutdated"],
-         "comments": [{"author": login(c), "body": c["body"], "url": c["url"]} for c in thread_comments(t)]}
-        for t in threads if not t["isResolved"] and not is_answered(t)
+         "comments": [{"author": login(c), "trusted": bool(is_trusted(c, trust)), "body": c["body"], "url": c["url"]}
+                      for c in thread_comments(t)]}
+        for t in threads if thread_pending(t, trust)
     ]
 
     failed, pending = [], []
@@ -140,7 +165,7 @@ def evaluate(view, threads, pushed, now, deadline, source="activity"):
         elif result in FAILED:
             failed.append({"name": name, "url": check.get("detailsUrl") or check.get("targetUrl")})
 
-    window_left = max(0, int((deadline - now).total_seconds()))
+    window_left = 0 if head_reviews >= expected_reviews else max(0, int((deadline - now).total_seconds()))
     if view["state"] != "OPEN":
         state = view["state"]
     elif pending_threads or top_level:
@@ -167,12 +192,14 @@ def evaluate(view, threads, pushed, now, deadline, source="activity"):
         "pushed_at_source": source,
         "review_deadline": deadline.isoformat(),
         "review_window_left_s": window_left,
+        "head_reviews": head_reviews,
         "mergeable": view["mergeable"],
         "merge_state": view["mergeStateStatus"],
         "checks_pending": pending,
         "checks_failed": failed,
         "threads": pending_threads,
         "top_level": top_level,
+        "untrusted": untrusted,
     }
 
 
@@ -182,20 +209,30 @@ def main():
     parser.add_argument("--wait", action="store_true", help="poll while the state is WAITING")
     parser.add_argument("--every", type=int, default=600, help="reviews run every N seconds on the clock")
     parser.add_argument("--grace", type=int, default=900, help="seconds a review may take to post after its run")
-    parser.add_argument("--max-wait", type=int, default=540, help="stop polling after this many seconds")
+    parser.add_argument("--reviews", type=int, default=2, help="reviews expected per push; stop waiting once all arrived")
+    parser.add_argument("--trust", default="", help="comma-separated extra reviewer logins, e.g. review bots")
+    parser.add_argument("--max-wait", type=int, default=480, help="stop polling after this many seconds")
     parser.add_argument("--interval", type=int, default=60, help="seconds between polls")
     args = parser.parse_args()
 
-    start = time.monotonic()
+    start, report = time.monotonic(), None
     while True:
-        view, threads, (pushed, source) = fetch(args.pr)
-        deadline = review_deadline(pushed, args.every, args.grace)
-        report = evaluate(view, threads, pushed, datetime.now(timezone.utc), deadline, source)
-        if not args.wait or report["state"] != "WAITING":
-            break
+        try:
+            view, threads, (pushed, source) = fetch(args.pr)
+            deadline = review_deadline(pushed, args.every, args.grace)
+            report = evaluate(view, threads, pushed, datetime.now(timezone.utc), deadline, source, args.reviews,
+                              set(filter(None, args.trust.split(","))))
+            if not args.wait or report["state"] != "WAITING":
+                break
+        except subprocess.TimeoutExpired:
+            if not args.wait:
+                raise
+            report = None  # gh hung: retry on the next poll
         if time.monotonic() - start + args.interval > args.max_wait:
             break
         time.sleep(args.interval)
+    if report is None:
+        raise SystemExit("gh timed out; rerun the script")
     print(json.dumps(report, indent=2))
 
 
