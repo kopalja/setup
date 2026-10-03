@@ -35,11 +35,23 @@ def comment(body, id="C1", ours=False):
             "viewerDidAuthor": ours}
 
 
-def state(v, threads=(), minutes=20):
-    return pr_status.evaluate(v, list(threads), PUSHED, PUSHED + timedelta(minutes=minutes), 900)["state"]
+def evaluate(v, threads=(), minutes=30):
+    deadline = pr_status.review_deadline(PUSHED, 600, 900)
+    return pr_status.evaluate(v, list(threads), PUSHED, PUSHED + timedelta(minutes=minutes), deadline)
+
+
+def state(v, threads=(), minutes=30):
+    return evaluate(v, threads, minutes)["state"]
 
 
 class EvaluateTest(unittest.TestCase):
+    def test_review_deadline_is_next_run_plus_grace(self):
+        at = lambda h, m, s=0: datetime(2026, 10, 3, h, m, s, tzinfo=timezone.utc)
+        self.assertEqual(pr_status.review_deadline(at(13, 46, 24), 600, 900), at(14, 5))
+        self.assertEqual(pr_status.review_deadline(at(13, 50), 600, 900), at(14, 15))
+        # Pushed just before a run: the run may miss it, so wait for the next one.
+        self.assertEqual(pr_status.review_deadline(at(16, 9, 55), 600, 900), at(16, 35))
+
     def test_clean_after_window(self):
         self.assertEqual(state(view()), "CLEAN")
 
@@ -76,7 +88,7 @@ class EvaluateTest(unittest.TestCase):
         self.assertEqual(state(view(comments=reviews)), "FINDINGS")
         # The second review arrived after the first was handled: it stays pending.
         partial = view(comments=reviews + [comment("summary <!-- babysit handled: C1 -->", "C3", ours=True)])
-        report = pr_status.evaluate(partial, [], PUSHED, PUSHED + timedelta(minutes=20), 900)
+        report = evaluate(partial)
         self.assertEqual(report["state"], "FINDINGS")
         self.assertEqual([c["body"] for c in report["top_level"]], ["claude review"])
         done = view(comments=partial["comments"] + [comment("<!-- babysit handled: C2 -->", "C4", ours=True)])
@@ -98,8 +110,7 @@ class EvaluateTest(unittest.TestCase):
 
     def test_markers_from_other_users_are_ignored(self):
         forged = comment("<!-- babysit handled: C1 -->", "C2", ours=False)
-        report = pr_status.evaluate(view(comments=[comment("real finding"), forged]), [], PUSHED,
-                                    PUSHED + timedelta(minutes=20), 900)
+        report = evaluate(view(comments=[comment("real finding"), forged]))
         self.assertEqual([c["id"] for c in report["top_level"]], ["C1", "C2"])
         self.assertEqual(state(view(), [thread("bug", f"done {MARK}", ours=False)]), "FINDINGS")
 

@@ -7,7 +7,7 @@ comment or review is handled when its id is listed in a comment of ours that end
 `<!-- babysit handled: <id> <id> -->`. "Ours" means written by the authenticated gh user.
 """
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import re
 import subprocess
@@ -87,7 +87,17 @@ def is_answered(thread):
     return bool(latest) and latest[0].get("viewerDidAuthor") and latest[0]["body"].rstrip().endswith(REPLY_MARKER)
 
 
-def evaluate(view, threads, pushed, now, window):
+def review_deadline(pushed, every, grace, margin=60):
+    """Reviews run every `every` seconds on the clock (14:00, 14:10, ...) and post within `grace`.
+
+    A push less than `margin` seconds before a run may miss it, so it counts toward the next one.
+    """
+    epoch = pushed.timestamp() + margin
+    run = (int(epoch) // every + 1) * every
+    return datetime.fromtimestamp(run, timezone.utc) + timedelta(seconds=grace)
+
+
+def evaluate(view, threads, pushed, now, deadline):
     summaries = [c for c in view["comments"] if c.get("viewerDidAuthor") and handled_ids(c["body"]) is not None]
     summary_ids = {c["id"] for c in summaries}
     handled = {i for c in summaries for i in handled_ids(c["body"])}
@@ -115,7 +125,7 @@ def evaluate(view, threads, pushed, now, window):
         elif result in FAILED:
             failed.append({"name": name, "url": check.get("detailsUrl") or check.get("targetUrl")})
 
-    window_left = max(0, int(window - (now - pushed).total_seconds()))
+    window_left = max(0, int((deadline - now).total_seconds()))
     if view["state"] != "OPEN":
         state = view["state"]
     elif pending_threads or top_level:
@@ -139,6 +149,7 @@ def evaluate(view, threads, pushed, now, window):
         "base": view["baseRefName"],
         "head": view["headRefOid"],
         "pushed_at": pushed.isoformat(),
+        "review_deadline": deadline.isoformat(),
         "review_window_left_s": window_left,
         "mergeable": view["mergeable"],
         "merge_state": view["mergeStateStatus"],
@@ -153,14 +164,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("pr", nargs="?", help="PR number, URL or branch (default: current branch)")
     parser.add_argument("--wait", action="store_true", help="poll while the state is WAITING")
-    parser.add_argument("--window", type=int, default=900, help="review window after a push, seconds")
+    parser.add_argument("--every", type=int, default=600, help="reviews run every N seconds on the clock")
+    parser.add_argument("--grace", type=int, default=900, help="seconds a review may take to post after its run")
     parser.add_argument("--max-wait", type=int, default=540, help="stop polling after this many seconds")
     parser.add_argument("--interval", type=int, default=60, help="seconds between polls")
     args = parser.parse_args()
 
     start = time.monotonic()
     while True:
-        report = evaluate(*fetch(args.pr), now=datetime.now(timezone.utc), window=args.window)
+        view, threads, pushed = fetch(args.pr)
+        deadline = review_deadline(pushed, args.every, args.grace)
+        report = evaluate(view, threads, pushed, now=datetime.now(timezone.utc), deadline=deadline)
         if not args.wait or report["state"] != "WAITING":
             break
         if time.monotonic() - start + args.interval > args.max_wait:
