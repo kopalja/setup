@@ -1,0 +1,6 @@
+interface:
+  display_name: "Babysit"
+  short_description: "Drive a PR through review cycles until mergeable"
+  default_prompt: "Use $babysit to drive this branch's PR until it is mergeable."
+policy:
+  allow_implicit_invocation: false

@@ -85,6 +85,11 @@ description: Do a specific task and when to use this workflow.
 Explain the steps to follow, what to check, and what the result should include.
 ```
 
+To make a skill explicit-only (never picked automatically), add
+`disable-model-invocation: true` to its front matter for Claude Code and an
+`agents/openai.yaml` with `policy: allow_implicit_invocation: false` for Codex;
+see `skills/babysit/`.
+
 Commit the skill directory to share it with this repository's users. Run
 `./deploy-skills` to install or refresh only the skills; `./init` (or
 `./init.sh`) also installs them as part of the full setup. Codex and Claude
