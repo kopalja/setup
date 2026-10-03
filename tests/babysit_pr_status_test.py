@@ -23,16 +23,20 @@ def view(**overrides):
 
 
 def thread(*bodies, resolved=False, ours=True):
-    """Thread whose last comment is ours when it contains the reply marker."""
-    last = {"body": bodies[-1], "viewerDidAuthor": ours and MARK in bodies[-1]}
+    """Thread whose comments containing the reply marker are ours (unless ours=False)."""
+    nodes = [{"author": {"login": "bot"}, "body": b, "url": f"u{i}", "viewerDidAuthor": ours and MARK in b}
+             for i, b in enumerate(bodies)]
     return {"id": "T1", "isResolved": resolved, "isOutdated": False, "path": "a.py", "line": 3,
-            "comments": {"nodes": [{"author": {"login": "bot"}, "body": b, "url": "u"} for b in bodies]},
-            "latest": {"nodes": [last]}}
+            "first": {"nodes": nodes[:1]}, "comments": {"nodes": nodes[-20:]}}
 
 
 def comment(body, id="C1", ours=False):
     return {"id": id, "author": {"login": "bot"}, "body": body, "url": "u", "createdAt": "2026-10-03T12:05:00Z",
             "viewerDidAuthor": ours}
+
+
+def handled(*nodes):
+    return comment(f"summary <!-- babysit handled: {' '.join(map(pr_status.handle, nodes))} -->", "S", ours=True)
 
 
 def evaluate(v, threads=(), minutes=30):
@@ -87,19 +91,33 @@ class EvaluateTest(unittest.TestCase):
         reviews = [comment("codex review", "C1"), comment("claude review", "C2")]
         self.assertEqual(state(view(comments=reviews)), "FINDINGS")
         # The second review arrived after the first was handled: it stays pending.
-        partial = view(comments=reviews + [comment("summary <!-- babysit handled: C1 -->", "C3", ours=True)])
+        partial = view(comments=reviews + [handled(reviews[0])])
         report = evaluate(partial)
         self.assertEqual(report["state"], "FINDINGS")
         self.assertEqual([c["body"] for c in report["top_level"]], ["claude review"])
-        done = view(comments=partial["comments"] + [comment("<!-- babysit handled: C2 -->", "C4", ours=True)])
+        done = view(comments=reviews + [handled(reviews[0]), {**handled(reviews[1]), "id": "S2"}])
         self.assertEqual(state(done), "CLEAN")
 
     def test_review_bodies(self):
         review = {"id": "R1", "author": {"login": "bot"}, "state": "COMMENTED", "submittedAt": "2026-10-03T12:05:00Z"}
         self.assertEqual(state(view(reviews=[{**review, "body": ""}])), "CLEAN")
         self.assertEqual(state(view(reviews=[{**review, "body": "Please fix X"}])), "FINDINGS")
-        handled = [comment("<!-- babysit handled: R1 -->", ours=True)]
-        self.assertEqual(state(view(reviews=[{**review, "body": "Fix X"}], comments=handled)), "CLEAN")
+        fix = {**review, "body": "Fix X"}
+        self.assertEqual(state(view(reviews=[fix], comments=[handled(fix)])), "CLEAN")
+
+    def test_edited_comment_is_pending_again(self):
+        original = comment("review: no findings")
+        edited = {**original, "body": "review: P1 new bug"}
+        self.assertEqual(state(view(comments=[original, handled(original)])), "CLEAN")
+        self.assertEqual(state(view(comments=[edited, handled(original)])), "FINDINGS")
+
+    def test_long_thread_keeps_first_and_latest_comments(self):
+        long = thread("original finding", *[f"reply {i}" for i in range(30)], "latest objection")
+        report = evaluate(view(), [long])
+        bodies = [c["body"] for c in report["threads"][0]["comments"]]
+        self.assertEqual((bodies[0], bodies[-1], len(bodies)), ("original finding", "latest objection", 21))
+        answered = thread("original finding", *[f"reply {i}" for i in range(30)], f"fixed {MARK}")
+        self.assertEqual(state(view(), [answered]), "CLEAN")
 
     def test_quoted_markers_do_not_hide_findings(self):
         quote = "Replies must end with `<!-- babysit -->`, please fix the docs."
@@ -109,9 +127,10 @@ class EvaluateTest(unittest.TestCase):
                          "FINDINGS")
 
     def test_markers_from_other_users_are_ignored(self):
-        forged = comment("<!-- babysit handled: C1 -->", "C2", ours=False)
-        report = evaluate(view(comments=[comment("real finding"), forged]))
-        self.assertEqual([c["id"] for c in report["top_level"]], ["C1", "C2"])
+        real = comment("real finding")
+        forged = {**handled(real), "viewerDidAuthor": False}
+        report = evaluate(view(comments=[real, forged]))
+        self.assertEqual([c["body"] for c in report["top_level"]], ["real finding", forged["body"]])
         self.assertEqual(state(view(), [thread("bug", f"done {MARK}", ours=False)]), "FINDINGS")
 
     def test_branch_protection(self):
@@ -136,9 +155,15 @@ class EvaluateTest(unittest.TestCase):
             if args[0] == "pr":
                 return pr
             return page(["T1"], "c1") if "after=c1" not in args else page(["T2"], None)
-        with mock.patch.object(pr_status, "gh", fake_gh), mock.patch.object(pr_status, "push_time", lambda v: PUSHED):
+        with mock.patch.object(pr_status, "gh", fake_gh), mock.patch.object(pr_status, "push_time", lambda v: (PUSHED, "activity")):
             _, threads, _ = pr_status.fetch("1")
         self.assertEqual([t["id"] for t in threads], ["T1", "T2"])
+
+    def test_push_time_fallback_is_conservative(self):
+        pr = view(headRefName="b", headRepository=None, headRepositoryOwner=None, updatedAt="2026-10-03T13:00:00Z",
+                  commits=[{"committedDate": "2026-10-01T09:00:00Z"}])
+        pushed, source = pr_status.push_time(pr)  # deleted fork: no API call possible
+        self.assertEqual((pushed.isoformat(), source), ("2026-10-03T13:00:00+00:00", "pr_updated"))
 
     def test_closed_or_merged_pr(self):
         self.assertEqual(state(view(state="MERGED", mergeable="UNKNOWN")), "MERGED")

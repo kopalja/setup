@@ -3,10 +3,12 @@
 
 Stateless: everything is derived from GitHub, so it is safe to rerun at any time.
 A review thread is handled when its last comment is ours and ends with REPLY_MARKER. A top-level
-comment or review is handled when its id is listed in a comment of ours that ends with
-`<!-- babysit handled: <id> <id> -->`. "Ours" means written by the authenticated gh user.
+comment or review is handled when its `handle` (id@body-hash, so edits reopen it) is listed in a
+comment of ours that ends with `<!-- babysit handled: <handle> <handle> -->`. "Ours" means written
+by the authenticated gh user.
 """
 import argparse
+import hashlib
 from datetime import datetime, timedelta, timezone
 import json
 import re
@@ -26,8 +28,8 @@ query($owner: String!, $repo: String!, $number: Int!, $after: String) {
         pageInfo { hasNextPage endCursor }
         nodes {
           id isResolved isOutdated path line
-          comments(first: 20) { nodes { author { login } body url } }
-          latest: comments(last: 1) { nodes { body viewerDidAuthor } }
+          first: comments(first: 1) { nodes { author { login } body url viewerDidAuthor } }
+          comments(last: 20) { nodes { author { login } body url viewerDidAuthor } }
         }
       }
     }
@@ -48,22 +50,26 @@ def login(node):
 
 
 def push_time(view):
-    """When the head commit was pushed; falls back to its commit date."""
-    owner = view["headRepositoryOwner"]["login"]
-    repo = view["headRepository"]["name"]
-    ref = quote(f"refs/heads/{view['headRefName']}", safe="")
+    """When the head commit was pushed, and where that time came from.
+
+    Without the activity API, fall back conservatively to the latest PR update: a push of an old
+    commit still updates the PR, so the review window cannot have closed before the push.
+    """
     try:
+        owner = view["headRepositoryOwner"]["login"]
+        repo = view["headRepository"]["name"]
+        ref = quote(f"refs/heads/{view['headRefName']}", safe="")
         for activity in json.loads(gh("api", f"repos/{owner}/{repo}/activity?ref={ref}&per_page=20")):
             if activity.get("after") == view["headRefOid"]:
-                return parse_time(activity["timestamp"])
-    except (subprocess.CalledProcessError, ValueError, KeyError):
+                return parse_time(activity["timestamp"]), "activity"
+    except (subprocess.CalledProcessError, ValueError, KeyError, TypeError):
         pass
-    return parse_time(view["commits"][-1]["committedDate"])
+    return max(parse_time(view["commits"][-1]["committedDate"]), parse_time(view["updatedAt"])), "pr_updated"
 
 
 def fetch(pr):
     fields = ("number,url,state,baseRefName,headRefName,headRefOid,headRepository,headRepositoryOwner,"
-              "commits,mergeable,mergeStateStatus,statusCheckRollup,comments,reviews")
+              "commits,updatedAt,mergeable,mergeStateStatus,statusCheckRollup,comments,reviews")
     view = json.loads(gh("pr", "view", *([pr] if pr else []), "--json", fields))
     owner, repo = view["url"].split("/")[3:5]
     threads, after = [], None
@@ -82,9 +88,18 @@ def handled_ids(body):
     return match.group(1).split() if match else None
 
 
+def handle(node):
+    return f'{node["id"]}@{hashlib.sha256(node["body"].encode()).hexdigest()[:12]}'
+
+
+def thread_comments(thread):
+    first, last = thread["first"]["nodes"], thread["comments"]["nodes"]
+    return first + [c for c in last if c["url"] not in {f["url"] for f in first}]
+
+
 def is_answered(thread):
-    latest = thread["latest"]["nodes"]
-    return bool(latest) and latest[0].get("viewerDidAuthor") and latest[0]["body"].rstrip().endswith(REPLY_MARKER)
+    last = thread["comments"]["nodes"][-1:]
+    return bool(last) and last[0].get("viewerDidAuthor") and last[0]["body"].rstrip().endswith(REPLY_MARKER)
 
 
 def review_deadline(pushed, every, grace, margin=60):
@@ -97,22 +112,22 @@ def review_deadline(pushed, every, grace, margin=60):
     return datetime.fromtimestamp(run, timezone.utc) + timedelta(seconds=grace)
 
 
-def evaluate(view, threads, pushed, now, deadline):
+def evaluate(view, threads, pushed, now, deadline, source="activity"):
     summaries = [c for c in view["comments"] if c.get("viewerDidAuthor") and handled_ids(c["body"]) is not None]
     summary_ids = {c["id"] for c in summaries}
     handled = {i for c in summaries for i in handled_ids(c["body"])}
     top_level = [
-        {"id": c["id"], "kind": "comment", "author": login(c), "body": c["body"], "url": c.get("url"),
+        {"handle": handle(c), "kind": "comment", "author": login(c), "body": c["body"], "url": c.get("url"),
          "at": c["createdAt"]}
-        for c in view["comments"] if c["id"] not in summary_ids | handled
+        for c in view["comments"] if c["id"] not in summary_ids and handle(c) not in handled
     ] + [
-        {"id": r["id"], "kind": "review", "author": login(r), "state": r["state"], "body": r["body"],
+        {"handle": handle(r), "kind": "review", "author": login(r), "state": r["state"], "body": r["body"],
          "at": r.get("submittedAt")}
-        for r in view["reviews"] if r["body"].strip() and r["id"] not in handled
+        for r in view["reviews"] if r["body"].strip() and handle(r) not in handled
     ]
     pending_threads = [
         {"thread_id": t["id"], "path": t["path"], "line": t["line"], "outdated": t["isOutdated"],
-         "comments": [{"author": login(c), "body": c["body"], "url": c["url"]} for c in t["comments"]["nodes"]]}
+         "comments": [{"author": login(c), "body": c["body"], "url": c["url"]} for c in thread_comments(t)]}
         for t in threads if not t["isResolved"] and not is_answered(t)
     ]
 
@@ -149,6 +164,7 @@ def evaluate(view, threads, pushed, now, deadline):
         "base": view["baseRefName"],
         "head": view["headRefOid"],
         "pushed_at": pushed.isoformat(),
+        "pushed_at_source": source,
         "review_deadline": deadline.isoformat(),
         "review_window_left_s": window_left,
         "mergeable": view["mergeable"],
@@ -172,9 +188,9 @@ def main():
 
     start = time.monotonic()
     while True:
-        view, threads, pushed = fetch(args.pr)
+        view, threads, (pushed, source) = fetch(args.pr)
         deadline = review_deadline(pushed, args.every, args.grace)
-        report = evaluate(view, threads, pushed, now=datetime.now(timezone.utc), deadline=deadline)
+        report = evaluate(view, threads, pushed, datetime.now(timezone.utc), deadline, source)
         if not args.wait or report["state"] != "WAITING":
             break
         if time.monotonic() - start + args.interval > args.max_wait:
