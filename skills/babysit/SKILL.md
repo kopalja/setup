@@ -1,7 +1,6 @@
 ---
 name: babysit
-description: Drive the current branch's GitHub PR to a mergeable state. Commits, pushes and opens the PR if needed, then loops - wait for reviews, address the relevant findings, push - until the PR is clean. Run only when the user explicitly invokes it.
-disable-model-invocation: true
+description: Drive the current branch's GitHub PR to a mergeable state. Commits, pushes and opens the PR if needed, then loops - wait for reviews, address the relevant findings, push - until the PR is clean. Use when the user asks to babysit a branch or PR, including combined requests like "Fix this bug we have discussed and then babysit", or asks to monitor reviews and address feedback until the PR is mergeable.
 ---
 
 # Babysit
@@ -12,6 +11,8 @@ Take the current branch from local work to a PR that is ready to merge. Finish w
 - A short blocker report saying what needs the user.
 
 Requires `gh` (authenticated) and `python3`. `scripts/pr_status.py` lives next to this file.
+
+When combined with an implementation request, finish the requested changes and relevant verification before starting this workflow. A request to fix a bug or open a PR alone does not trigger babysitting.
 
 ## 1. Ship the branch
 
