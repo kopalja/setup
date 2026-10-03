@@ -2,8 +2,9 @@
 """Report what a GitHub PR still needs before it can merge; optionally wait for reviews.
 
 Stateless: everything is derived from GitHub, so it is safe to rerun at any time.
-A review thread is handled when its last comment contains MARKER. A top-level comment or
-review is handled when its id is listed in a `<!-- babysit handled: <id> <id> -->` comment.
+A review thread is handled when its last comment is ours and ends with REPLY_MARKER. A top-level
+comment or review is handled when its id is listed in a comment of ours that ends with
+`<!-- babysit handled: <id> <id> -->`. "Ours" means written by the authenticated gh user.
 """
 import argparse
 from datetime import datetime, timezone
@@ -13,18 +14,20 @@ import subprocess
 import time
 from urllib.parse import quote
 
-MARKER = "<!-- babysit"
-HANDLED = re.compile(r"<!-- babysit handled:([^>]*)-->")
+REPLY_MARKER = "<!-- babysit -->"
+HANDLED = re.compile(r"<!-- babysit handled:([^>]*)-->\s*$")
 FAILED = {"FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
 PENDING = {"PENDING", "EXPECTED", None}
 THREADS_QUERY = """
-query($owner: String!, $repo: String!, $number: Int!) {
+query($owner: String!, $repo: String!, $number: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id isResolved isOutdated path line
-          comments(first: 50) { nodes { author { login } body url createdAt } }
+          comments(first: 20) { nodes { author { login } body url } }
+          latest: comments(last: 1) { nodes { body viewerDidAuthor } }
         }
       }
     }
@@ -60,31 +63,47 @@ def push_time(view):
 
 def fetch(pr):
     fields = ("number,url,state,baseRefName,headRefName,headRefOid,headRepository,headRepositoryOwner,"
-              "commits,mergeable,statusCheckRollup,comments,reviews")
+              "commits,mergeable,mergeStateStatus,statusCheckRollup,comments,reviews")
     view = json.loads(gh("pr", "view", *([pr] if pr else []), "--json", fields))
     owner, repo = view["url"].split("/")[3:5]
-    data = json.loads(gh("api", "graphql", "-f", f"query={THREADS_QUERY}", "-f", f"owner={owner}",
-                         "-f", f"repo={repo}", "-F", f"number={view['number']}"))
-    threads = data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
-    return view, threads, push_time(view)
+    threads, after = [], None
+    while True:
+        args = ["-f", f"query={THREADS_QUERY}", "-f", f"owner={owner}", "-f", f"repo={repo}",
+                "-F", f"number={view['number']}", *(["-f", f"after={after}"] if after else [])]
+        page = json.loads(gh("api", "graphql", *args))["data"]["repository"]["pullRequest"]["reviewThreads"]
+        threads += page["nodes"]
+        if not page["pageInfo"]["hasNextPage"]:
+            return view, threads, push_time(view)
+        after = page["pageInfo"]["endCursor"]
+
+
+def handled_ids(body):
+    match = HANDLED.search(body.rstrip())
+    return match.group(1).split() if match else None
+
+
+def is_answered(thread):
+    latest = thread["latest"]["nodes"]
+    return bool(latest) and latest[0].get("viewerDidAuthor") and latest[0]["body"].rstrip().endswith(REPLY_MARKER)
 
 
 def evaluate(view, threads, pushed, now, window):
-    handled = {i for c in view["comments"] for m in HANDLED.findall(c["body"]) for i in m.split()}
+    summaries = [c for c in view["comments"] if c.get("viewerDidAuthor") and handled_ids(c["body"]) is not None]
+    summary_ids = {c["id"] for c in summaries}
+    handled = {i for c in summaries for i in handled_ids(c["body"])}
     top_level = [
         {"id": c["id"], "kind": "comment", "author": login(c), "body": c["body"], "url": c.get("url"),
          "at": c["createdAt"]}
-        for c in view["comments"] if MARKER not in c["body"] and c["id"] not in handled
+        for c in view["comments"] if c["id"] not in summary_ids | handled
     ] + [
         {"id": r["id"], "kind": "review", "author": login(r), "state": r["state"], "body": r["body"],
          "at": r.get("submittedAt")}
-        for r in view["reviews"] if r["body"].strip() and MARKER not in r["body"] and r["id"] not in handled
+        for r in view["reviews"] if r["body"].strip() and r["id"] not in handled
     ]
     pending_threads = [
         {"thread_id": t["id"], "path": t["path"], "line": t["line"], "outdated": t["isOutdated"],
          "comments": [{"author": login(c), "body": c["body"], "url": c["url"]} for c in t["comments"]["nodes"]]}
-        for t in threads
-        if not t["isResolved"] and t["comments"]["nodes"] and MARKER not in t["comments"]["nodes"][-1]["body"]
+        for t in threads if not t["isResolved"] and not is_answered(t)
     ]
 
     failed, pending = [], []
@@ -105,8 +124,12 @@ def evaluate(view, threads, pushed, now, window):
         state = "CONFLICT"
     elif failed:
         state = "CHECKS_FAILED"
-    elif window_left or pending or view["mergeable"] != "MERGEABLE":
+    elif window_left or pending or view["mergeable"] != "MERGEABLE" or view["mergeStateStatus"] == "UNKNOWN":
         state = "WAITING"
+    elif view["mergeStateStatus"] == "BEHIND":
+        state = "BEHIND"
+    elif view["mergeStateStatus"] in ("BLOCKED", "DRAFT", "DIRTY"):
+        state = "BLOCKED"
     else:
         state = "CLEAN"
 
@@ -118,6 +141,7 @@ def evaluate(view, threads, pushed, now, window):
         "pushed_at": pushed.isoformat(),
         "review_window_left_s": window_left,
         "mergeable": view["mergeable"],
+        "merge_state": view["mergeStateStatus"],
         "checks_pending": pending,
         "checks_failed": failed,
         "threads": pending_threads,
