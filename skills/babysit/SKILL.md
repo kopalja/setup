@@ -30,7 +30,7 @@ python3 <skill-dir>/scripts/pr_status.py --wait
 
 It polls for up to 8 minutes, so give the command a timeout of at least 10 minutes (for example `timeout_ms: 600000`), or run it in the background and wait for it. The script is stateless, so rerunning it is always safe. It prints JSON whose `state` decides the next step.
 
-Reviews run on the clock every 10 minutes (14:00, 14:10, ...) and only review the latest pushed commit. They are posted several minutes after the run starts. So reviews for a push are due by the first run at least 1 minute after the push, plus 15 minutes of grace (`review_deadline`). Each push gets at most two reviews (Codex and Claude), each mentioning the reviewed commit (`Commit: <sha>`). Once both reviews of the current HEAD (`Commit: <full sha>`) have arrived (`head_reviews`), the wait ends early. Tune this with `--every`, `--grace` (seconds) and `--reviews`.
+Reviews run on the clock every 5 minutes (14:00, 14:05, ...) and only review the latest pushed commit. They are posted several minutes after the run starts. So reviews for a push are due by the first run at least 1 minute after the push, plus 15 minutes of grace (`review_deadline`). Each push gets at most two reviews (Codex and Claude), each mentioning the reviewed commit (`Commit: <sha>`). Once both reviews of the current HEAD (`Commit: <full sha>`) have arrived (`head_reviews`), the wait ends early. Tune this with `--every`, `--grace` (seconds) and `--reviews`.
 
 | `state` | Meaning | Next step |
 | --- | --- | --- |

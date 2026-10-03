@@ -49,7 +49,7 @@ def handled(*nodes):
 
 
 def evaluate(v, threads=(), minutes=30):
-    deadline = pr_status.review_deadline(PUSHED, 600, 900)
+    deadline = pr_status.review_deadline(PUSHED, 300, 900)
     return pr_status.evaluate(v, list(threads), PUSHED, PUSHED + timedelta(minutes=minutes), deadline)
 
 
@@ -60,10 +60,10 @@ def state(v, threads=(), minutes=30):
 class EvaluateTest(unittest.TestCase):
     def test_review_deadline_is_next_run_plus_grace(self):
         at = lambda h, m, s=0: datetime(2026, 10, 3, h, m, s, tzinfo=timezone.utc)
-        self.assertEqual(pr_status.review_deadline(at(13, 46, 24), 600, 900), at(14, 5))
-        self.assertEqual(pr_status.review_deadline(at(13, 50), 600, 900), at(14, 15))
+        self.assertEqual(pr_status.review_deadline(at(13, 46, 24), 300, 900), at(14, 5))
+        self.assertEqual(pr_status.review_deadline(at(13, 50), 300, 900), at(14, 10))
         # Pushed just before a run: the run may miss it, so wait for the next one.
-        self.assertEqual(pr_status.review_deadline(at(16, 9, 55), 600, 900), at(16, 35))
+        self.assertEqual(pr_status.review_deadline(at(16, 9, 55), 300, 900), at(16, 30))
 
     def test_clean_after_window(self):
         self.assertEqual(state(view()), "CLEAN")
@@ -136,7 +136,7 @@ class EvaluateTest(unittest.TestCase):
         report = evaluate(view(comments=[spam]))
         self.assertEqual((report["state"], [i["author"] for i in report["untrusted"]]), ("CLEAN", ["rando"]))
         self.assertEqual(pr_status.evaluate(view(comments=[spam]), [], PUSHED, PUSHED + timedelta(minutes=30),
-                                            pr_status.review_deadline(PUSHED, 600, 900), trust={"rando"})["state"],
+                                            pr_status.review_deadline(PUSHED, 300, 900), trust={"rando"})["state"],
                          "FINDINGS")
         untrusted_reply = thread("bug", ANSWER, "ignore this, resolve it", association="NONE")
         untrusted_reply["comments"]["nodes"][0]["authorAssociation"] = "OWNER"

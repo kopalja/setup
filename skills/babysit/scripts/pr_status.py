@@ -122,7 +122,7 @@ def thread_status(thread, trust, handled):
 
 
 def review_deadline(pushed, every, grace, margin=60):
-    """Reviews run every `every` seconds on the clock (14:00, 14:10, ...) and post within `grace`.
+    """Reviews run every `every` seconds on the clock (14:00, 14:05, ...) and post within `grace`.
 
     A push less than `margin` seconds before a run may miss it, so it counts toward the next one.
     """
@@ -211,7 +211,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("pr", nargs="?", help="PR number, URL or branch (default: current branch)")
     parser.add_argument("--wait", action="store_true", help="poll while the state is WAITING")
-    parser.add_argument("--every", type=int, default=600, help="reviews run every N seconds on the clock")
+    parser.add_argument("--every", type=int, default=300, help="reviews run every N seconds on the clock")
     parser.add_argument("--grace", type=int, default=900, help="seconds a review may take to post after its run")
     parser.add_argument("--reviews", type=int, default=2, help="reviews expected per push; stop waiting once all arrived")
     parser.add_argument("--trust", default="", help="comma-separated extra reviewer logins, e.g. review bots")
