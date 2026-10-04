@@ -1,10 +1,11 @@
 # Global Agent Instructions
 
-## User
+## User Preferences
 
-I am a software engineer. I preffer:
-- Vim over nano
-- One line bash commands over muplitple lines
+- I am a software engineer.
+- Prefer Vim over Nano.
+- Prefer Python with type annotations.
+- Prefer single-line Bash commands over multi-line commands when practical.
 
 ## Core Principles
 
