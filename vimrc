@@ -2,22 +2,6 @@ call plug#begin('~/.vim/plugged')
 Plug 'gruvbox-community/gruvbox'
 Plug 'ojroques/vim-oscyank', {'branch': 'main'}
 call plug#end()
-
-" Share file visits with the shell's Ctrl-P picker.
-function! s:RecordFuzzyVisit() abort
-  let path = expand('%:p')
-  if &buftype !=# '' || !filereadable(path) || path =~# "\n"
-    return
-  endif
-  let state = empty($XDG_STATE_HOME) ? expand('~/.local/state') : $XDG_STATE_HOME
-  let directory = state . '/fuzzy-open'
-  call mkdir(directory, 'p')
-  call writefile([path], directory . '/history', 'a')
-endfunction
-augroup fuzzy_open_history
-  autocmd!
-  autocmd BufEnter * call <SID>RecordFuzzyVisit()
-augroup END
 " -----------------------------------------------------------------------------
 " Color settings
 " -----------------------------------------------------------------------------

@@ -156,44 +156,22 @@ cwt-discard() {
 # ==========================================================================================
 
 # ===Fuzzy file and folde search===========================================================
-fuzzy-record-directory() {
-    local history_file="${XDG_STATE_HOME:-$HOME/.local/state}/fuzzy-open/history"
-    mkdir -p -- "${history_file:h}" && print -r -- "$PWD" >> "$history_file"
-}
-autoload -Uz add-zsh-hook
-add-zsh-hook chpwd fuzzy-record-directory
-fuzzy-record-directory
-
-fuzzy-open-candidates() {
-    local history_file="${XDG_STATE_HOME:-$HOME/.local/state}/fuzzy-open/history"
-    local entry
-    local -a entries
-    if [[ -f "$history_file" ]]; then
-      entries=("${(@f)$(<"$history_file")}")
-      for entry in "${(@Oa)entries}"; do
-        [[ -e "$entry" ]] && print -r -- "$entry"
-      done
-    fi
-    find "$HOME" \( -type d \( \
-      -name .git -o -name .venv -o -name .pyenv -o -name .cache -o \
-      -name .oh-my-zsh -o -name .vs-code -o -name .config -o \
-      -name .vscode-server -o -name .tmp -o -name Library -o \
-      -name node_modules \) -prune \) -o \( -type f -o -type d \) -print 2>/dev/null
-}
-
 fuzzy-open() {
     local selected
-    selected=$(fuzzy-open-candidates | awk '!seen[$0]++' | fzf \
+    selected=$(FZF_DEFAULT_COMMAND='' fzf \
+      --walker=file,dir,hidden \
+      --walker-skip=.git,.venv,.pyenv,.cache,.oh-my-zsh,.vs-code,.config,.vscode-server,.tmp,Library,node_modules \
+      --walker-root="$HOME" \
       --delimiter="^$HOME/" \
       --with-nth='~/{2..}' \
-      --no-sort \
+      --tiebreak=length \
       --no-multi \
       --height=70% \
       --tmux=center,90%,90% \
       --layout=default \
       --preview='if [ -d {} ]; then ls -la {}; else (batcat --style=numbers --color=always --theme=gruvbox-dark --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
       --preview-window='right:50%:wrap' \
-      --prompt='❯ ')
+      --prompt='❯ ' < /dev/tty)
     if [[ -n "$selected" ]]; then
       if [[ -d "$selected" ]]; then
         BUFFER="cd -- ${(q)selected}"
