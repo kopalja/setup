@@ -27,6 +27,12 @@ newer [fzf release](https://github.com/junegunn/fzf/releases) on that system.
 The script reports missing commands together and does not use `sudo` or a package
 manager.
 
+Ctrl-P lists visited directories and files opened in Vim first, most recent
+first, followed by other paths under your home directory. Results are unique;
+missing historical paths are omitted. Typing filters the list while preserving
+this order. History persists in `${XDG_STATE_HOME:-~/.local/state}/fuzzy-open/history`
+and starts accumulating after the updated Zsh and Vim configurations are loaded.
+
 ## Usage
 
 ```sh
@@ -134,6 +140,7 @@ once.
 
 ```sh
 bash tests/init_test.sh
+python3 tests/fuzzy_history_test.py
 python3 tests/tmux_status_test.py
 python3 tests/claude_statusline_test.py
 ```
