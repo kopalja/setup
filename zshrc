@@ -56,13 +56,13 @@ codex() {
     command codex -c "projects.\"$directory\".trust_level=\"trusted\"" "$@"
 }
 
-alias c1="codex -c model=gpt-6-luna -c model_reasoning_effort=medium"
-alias c2="codex -c model=gpt-6.1-sol -c model_reasoning_effort=high"
-alias c3="codex -c model=gpt-6-astra -c model_reasoning_effort=medium"
-alias c4="codex -c model=gpt-6-astra -c model_reasoning_effort=high"
-alias cl="codex resume --last"
+# ======= Codex/Clause aliases ------------------
+alias c1="codex -m gpt-6-luna"
+alias c2="codex -m gpt-6.1-sol"
+alias c3="codex -m gpt-6-astra"
 alias cc="claude"
-
+alias cl="codex resume --last"
+alias ccl="claude -c"
 export EDITOR=/usr/bin/vim
 
 # Creating/discarding worktrees
