@@ -426,6 +426,38 @@ test_installed_zsh_exposes_local_bin() {
   cleanup_fixture
 }
 
+test_codex_automatically_trusts_launch_directory() {
+  local output expected target option
+  setup_fixture
+  run_setup >/dev/null 2>&1
+  write_fake_command "$TEST_HOME/.local/bin/codex" 'printf "<%s>\n" "$@"'
+  target="$TEST_HOME/project with spaces"
+  mkdir -p "$target"
+  target="$(cd "$target" && pwd -P)"
+  expected="<projects.\"$target\".trust_level=\"trusted\">"
+
+  for option in current -C --cd --cd= -Cjoined; do
+    output="$(HOME="$TEST_HOME" PATH=/usr/bin:/bin "$REAL_ZSH" -c '
+      source "$HOME/.zshrc"
+      case "$1" in
+        current) cd "$2"; codex resume --last ;;
+        --cd=) codex "--cd=$2" resume --last ;;
+        -Cjoined) codex "-C$2" resume --last ;;
+        *) codex "$1" "$2" resume --last ;;
+      esac
+    ' test "$option" "$target" 2>&1)"
+    assert_contains "$output" "$expected" "Codex trusts directory ($option)"
+    assert_contains "$output" $'<resume>\n<--last>' "Codex preserves arguments ($option)"
+  done
+
+  target="$TEST_HOME/quote\"and\\backslash"
+  mkdir -p "$target"
+  output="$(HOME="$TEST_HOME" PATH=/usr/bin:/bin "$REAL_ZSH" -c 'source "$HOME/.zshrc"; cd "$1"; codex -- "-C"' test "$target" 2>&1)"
+  assert_contains "$output" 'quote\"and\\backslash".trust_level="trusted"' "Codex escapes TOML paths"
+  assert_contains "$output" $'<-->\n<-C>' "Codex preserves prompt after --"
+  cleanup_fixture
+}
+
 test_installed_vim_configuration_parses() {
   local output status
   setup_fixture
@@ -630,6 +662,7 @@ test_update_run_updates_codex_and_claude
 test_failed_copy_preserves_existing_configuration
 test_runtime_startup_has_no_dependency_side_effects
 test_installed_zsh_exposes_local_bin
+test_codex_automatically_trusts_launch_directory
 test_installed_vim_configuration_parses
 test_installed_shell_configurations_parse
 test_access_key_is_added_once_without_removing_existing_keys

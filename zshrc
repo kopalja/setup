@@ -30,6 +30,32 @@ bindkey '^[l' forward-char
 
 
 # Codex shortcuts
+codex() {
+    local directory="$PWD" arg
+    local -a args=("$@")
+    local i
+    for ((i = 1; i <= $#args; i++)); do
+      arg="$args[i]"
+      case "$arg" in
+        --) break ;;
+        -C|--cd)
+          ((i++))
+          directory="$args[i]"
+          ;;
+        --cd=*) directory="${arg#--cd=}" ;;
+        -C?*) directory="${arg#-C}" ;;
+      esac
+    done
+    directory="$(cd -- "$directory" && pwd -P)" || return
+    # Escape the path for a quoted TOML key.
+    directory="${directory//\\/\\\\}"
+    directory="${directory//\"/\\\"}"
+    directory="${directory//$'\n'/\\n}"
+    directory="${directory//$'\r'/\\r}"
+    directory="${directory//$'\t'/\\t}"
+    command codex -c "projects.\"$directory\".trust_level=\"trusted\"" "$@"
+}
+
 alias c1="codex -c model=gpt-6-luna -c model_reasoning_effort=medium"
 alias c2="codex -c model=gpt-6.1-sol -c model_reasoning_effort=high"
 alias c3="codex -c model=gpt-6-astra -c model_reasoning_effort=medium"
@@ -186,5 +212,5 @@ fuzzy-content-open() {
     fi
 }
 zle -N fuzzy-content-open
-bindkey '^G' fuzzy-content-open
+bindkey '^O' fuzzy-content-open
 # ==========================================================================================

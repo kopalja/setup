@@ -57,6 +57,11 @@ refreshes Codex if it lives in `~/.local/bin/`.
 If the `codex` command exists, `codex_config.toml` is installed as
 `~/.codex/config.toml`. `_AGENTS.md` is also installed as
 `~/.codex/AGENTS.md`, with the same backup behavior.
+The Zsh `codex` wrapper automatically trusts the launch directory (including
+`-C` / `--cd` targets), so folder-access prompts do not recur after setup
+replaces the config. This applies to every folder launched through the wrapper
+and the `c1`–`c4`, `cl`, and `cwt` shortcuts: folder settings may run code
+automatically. Open a new shell after setup to load the wrapper.
 If the `claude` command exists, `claude_config.json` is installed as
 `~/.claude/settings.json` and `_CLAUDE.md` as `~/.claude/CLAUDE.md`, with the
 same backup behavior.
