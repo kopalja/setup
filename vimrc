@@ -17,6 +17,12 @@ endif
 syntax on
 "----------------------------------------------------------------------
 
+"=== Status line ===============================
+" Always show; %F = full path, %m modified, %r readonly, %= right-align
+set laststatus=2
+set statusline=%F\ %m%r%h%w%=%l,%c\ \ %p%%
+"===============================================
+
 let mapleader=" "
 
 
