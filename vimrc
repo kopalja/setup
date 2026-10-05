@@ -18,9 +18,12 @@ syntax on
 "----------------------------------------------------------------------
 
 "=== Status line ===============================
-" Always show; %F = full path, %m modified, %r readonly, %= right-align
-set laststatus=2
-set statusline=%F\ %m%r%h%w%=%l,%c\ \ %p%%
+" Show at top; %F = full path, %m modified, %r readonly, %= right-align
+set laststatus=0
+set showtabline=2
+set tabline=%F\ %m%r%h%w%=%l,%c\ \ %p%%
+highlight TabLineFill guifg=#fbf1c7 guibg=#3c3836 gui=NONE ctermfg=230 ctermbg=237 cterm=NONE
+autocmd CursorMoved,CursorMovedI * redrawtabline
 "===============================================
 
 let mapleader=" "

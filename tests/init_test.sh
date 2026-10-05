@@ -471,7 +471,12 @@ test_installed_vim_configuration_parses() {
     printf '%s\n' 'endfunction'
   } >"$TEST_HOME/.vim/autoload/plug.vim"
 
-  output="$(HOME="$TEST_HOME" "$REAL_VIM" -Nu "$TEST_HOME/.vimrc" -n -es -i NONE -c 'qa' 2>&1)"
+  output="$(HOME="$TEST_HOME" "$REAL_VIM" -Nu "$TEST_HOME/.vimrc" -n -es -i NONE \
+    -c 'call assert_equal(0, &laststatus, "bottom status line is hidden")' \
+    -c 'call assert_equal(2, &showtabline, "top status bar stays visible in a single window")' \
+    -c 'call assert_equal("#fbf1c7", synIDattr(hlID("TabLineFill"), "fg", "gui"))' \
+    -c 'call assert_equal("#3c3836", synIDattr(hlID("TabLineFill"), "bg", "gui"))' \
+    -c 'if !empty(v:errors) | cquit | endif' -c 'qa' 2>&1)"
   status=$?
 
   if ((status != 0)); then
