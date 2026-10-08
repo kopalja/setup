@@ -11,7 +11,7 @@ CWT = "cwt() {" + ZSHRC.split("cwt() {", 1)[1].split("\ncwt-discard()", 1)[0]
 
 
 class CwtTest(unittest.TestCase):
-    def test_copies_untracked_hidden_files_and_enters_worktree(self) -> None:
+    def test_copies_only_root_hidden_files_and_enters_worktree(self) -> None:
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             base = Path(temporary)
             repo = base / "repo"
@@ -41,6 +41,8 @@ class CwtTest(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(content)
             (repo / ".env-link").symlink_to(".env")
+            (repo / ".directory-link").symlink_to(".secrets", target_is_directory=True)
+            (repo / ".empty-directory").mkdir()
             worktrees = base / "worktrees"
             script = CWT + '\ncodex() { exit 99; }\ncwt feature/test || exit $?\npwd\n'
             result = subprocess.run(
@@ -51,9 +53,12 @@ class CwtTest(unittest.TestCase):
             worktree = worktrees / "repo" / "feature-test"
             self.assertEqual(Path(result.stdout.strip().splitlines()[-1]), worktree)
             for name, content in files.items():
-                if name != "plain.txt":
+                if name.startswith(".") and "/" not in name or name == "AGENTS.md":
                     self.assertEqual((worktree / name).read_text(), content)
-            self.assertFalse((worktree / "plain.txt").exists())
+                else:
+                    self.assertFalse((worktree / name).exists())
+            for name in (".secrets", "nested", ".directory-link", ".empty-directory"):
+                self.assertFalse((worktree / name).exists())
             self.assertEqual((worktree / ".tracked").read_text(), "committed")
             self.assertTrue((worktree / ".env-link").is_symlink())
 

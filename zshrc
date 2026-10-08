@@ -86,10 +86,9 @@ cwt() {
     if [[ -f "$repo_root/AGENTS.md" ]]; then
       cp "$repo_root/AGENTS.md" "$worktree/AGENTS.md" || return
     fi
-    # Include ignored dotfiles and files inside hidden directories.
+    # Include only untracked root-level dotfiles, including ignored files.
     while IFS= read -r -d '' file; do
-      [[ "$file" == .* || "$file" == */.* ]] || continue
-      mkdir -p "${worktree}/${file:h}" || return
+      [[ "$file" == .* && "$file" != */* && -f "$repo_root/$file" ]] || continue
       cp -P "$repo_root/$file" "$worktree/$file" || return
     done < <(git -C "$repo_root" ls-files --others -z)
     cd "$worktree" || return
