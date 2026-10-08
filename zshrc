@@ -30,31 +30,31 @@ bindkey '^[l' forward-char
 
 
 # Codex shortcuts
-codex() {
-    local directory="$PWD" arg
-    local -a args=("$@")
-    local i
-    for ((i = 1; i <= $#args; i++)); do
-      arg="$args[i]"
-      case "$arg" in
-        --) break ;;
-        -C|--cd)
-          ((i++))
-          directory="$args[i]"
-          ;;
-        --cd=*) directory="${arg#--cd=}" ;;
-        -C?*) directory="${arg#-C}" ;;
-      esac
-    done
-    directory="$(cd -- "$directory" && pwd -P)" || return
-    # Escape the path for a quoted TOML key.
-    directory="${directory//\\/\\\\}"
-    directory="${directory//\"/\\\"}"
-    directory="${directory//$'\n'/\\n}"
-    directory="${directory//$'\r'/\\r}"
-    directory="${directory//$'\t'/\\t}"
-    command codex -c "projects.\"$directory\".trust_level=\"trusted\"" "$@"
-}
+# codex() {
+#     local directory="$PWD" arg
+#     local -a args=("$@")
+#     local i
+#     for ((i = 1; i <= $#args; i++)); do
+#       arg="$args[i]"
+#       case "$arg" in
+#         --) break ;;
+#         -C|--cd)
+#           ((i++))
+#           directory="$args[i]"
+#           ;;
+#         --cd=*) directory="${arg#--cd=}" ;;
+#         -C?*) directory="${arg#-C}" ;;
+#       esac
+#     done
+#     directory="$(cd -- "$directory" && pwd -P)" || return
+#     # Escape the path for a quoted TOML key.
+#     directory="${directory//\\/\\\\}"
+#     directory="${directory//\"/\\\"}"
+#     directory="${directory//$'\n'/\\n}"
+#     directory="${directory//$'\r'/\\r}"
+#     directory="${directory//$'\t'/\\t}"
+#     command codex -c "projects.\"$directory\".trust_level=\"trusted\"" "$@"
+# }
 
 # ======= Codex/Clause aliases ------------------
 alias c1="codex -m gpt-6-luna"
@@ -70,33 +70,12 @@ export EDITOR=/usr/bin/vim
 export CODEX_WORKTREE_ROOT="$HOME/.worktrees"
 cwt() {
     local branch="$1"
-    [[ -n "$branch" ]] || {
-      echo "Usage: cwt <branch-name> [sol|astra|luna]"
+    [[ $# -eq 1 && -n "$branch" ]] || {
+      echo "Usage: cwt <branch-name>"
       return 2
     }
 
-    local selector="${2:-astra}"
-    local model reasoning_effort
-    case "$selector" in
-      sol)
-        model="gpt-5.6-sol"
-        reasoning_effort="medium"
-        ;;
-      astra)
-        model="gpt-6-astra"
-        reasoning_effort="low"
-        ;;
-      luna)
-        model="gpt-5.6-luna"
-        reasoning_effort="medium"
-        ;;
-      *)
-        echo "Usage: cwt <branch-name> [sol|astra|luna]"
-        return 2
-        ;;
-    esac
-
-    local repo_root repo_name branch_dir worktree
+    local repo_root repo_name branch_dir worktree file
     repo_root="$(git rev-parse --show-toplevel)" || return
     repo_name="$(basename "$repo_root")"
     branch_dir="${branch//\//-}"
@@ -107,8 +86,13 @@ cwt() {
     if [[ -f "$repo_root/AGENTS.md" ]]; then
       cp "$repo_root/AGENTS.md" "$worktree/AGENTS.md" || return
     fi
+    # Include ignored dotfiles and files inside hidden directories.
+    while IFS= read -r -d '' file; do
+      [[ "$file" == .* || "$file" == */.* ]] || continue
+      mkdir -p "${worktree}/${file:h}" || return
+      cp -P "$repo_root/$file" "$worktree/$file" || return
+    done < <(git -C "$repo_root" ls-files --others -z)
     cd "$worktree" || return
-    codex -C "$worktree" -c model="$model" -c model_reasoning_effort="$reasoning_effort"
 }
 
 cwt-discard() {
