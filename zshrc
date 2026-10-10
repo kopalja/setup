@@ -8,7 +8,10 @@ RPROMPT=""
 ZSH_THEME="af-magic"
 ZSH_DISABLE_COMPFIX=true
 
-ZSH_TMUX_AUTOSTART=true
+# Avoid attaching when .zshrc is explicitly sourced by a script.
+ZSH_TMUX_AUTOSTART=false
+[[ -o interactive && -t 0 && -t 1 && "$TERM" != dumb ]] && ZSH_TMUX_AUTOSTART=true
+ZSH_TMUX_AUTOCONNECT=true
 ZSH_TMUX_AUTOQUIT=false
 
 plugins=(git tmux docker zsh-autosuggestions copybuffer)

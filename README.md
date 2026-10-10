@@ -115,11 +115,36 @@ Claude Code tabs behave the same way: the hooks in `claude_config.json` set
 the `@claude-working` tmux pane option (1 while working, 0 when done or
 waiting for input). Claude Code shows its session topic as the tab title.
 
-For an already-running tmux server, reload after setup:
+Setup reloads the default tmux server if it is already running. To manually
+reload after editing the configuration:
 
 ```sh
 tmux source-file ~/.tmux.conf
 ```
+
+Setup also adds an interactive SSH-only Zsh fallback to `~/.bashrc` and the
+active Bash login profile (`~/.bash_profile`, `~/.bash_login`, or `~/.profile`),
+preserving existing content and backing up changed files. This handles accounts
+where `chsh` cannot change the login shell. Zsh attaches to an existing tmux
+session or creates one; new tmux panes use Zsh.
+
+Leave work running by detaching with `Ctrl+B`, then `d`, before logging out.
+Running `exit` in the last pane closes the session. Sessions survive SSH
+disconnects, but not a reboot. Hosts configured with `KillUserProcesses=yes`
+also kill tmux on logout; ask the administrator for a permitted persistence
+exception (particularly on Slurm hosts). Tmux settings cannot override that
+host policy. Setup checks the logind configuration when `systemd-analyze` is
+available and reports this setting; it does not change system policy.
+
+For the popup shortcut, add this to your **local Ghostty configuration** and
+reload Ghostty's configuration:
+
+```ini
+keybind = ctrl+i=text:\x1b[99~
+```
+
+This sends a distinct sequence for Ctrl+I; Tab remains available for completion,
+including with older tmux versions. `Ctrl+B`, then `g`, also opens the popup.
 
 To install a different SSH public key into `authorized_keys`, pass it with:
 
@@ -134,6 +159,7 @@ once.
 
 ```sh
 bash tests/init_test.sh
+python3 tests/tmux_startup_test.py
 python3 tests/tmux_status_test.py
 python3 tests/claude_statusline_test.py
 ```

@@ -132,6 +132,56 @@ ensure_git_repo() {
   fi
 }
 
+ensure_bash_ssh_startup() {
+  local login_file="$HOME/.profile" target temporary candidate
+  for candidate in .bash_profile .bash_login .profile; do
+    if [ -e "$HOME/$candidate" ]; then
+      login_file="$HOME/$candidate"
+      break
+    fi
+  done
+
+  # Bash reads a profile on login and .bashrc for other interactive shells.
+  for target in "$HOME/.bashrc" "$login_file"; do
+    if [ -f "$target" ] && grep -Fq '# setup: SSH Zsh startup' "$target"; then
+      continue
+    fi
+    temporary="$(mktemp "${target}.startup.XXXXXX")"
+    if [ -f "$target" ]; then
+      cat "$target" >"$temporary"
+    fi
+    cat >>"$temporary" <<'EOF'
+
+# setup: SSH Zsh startup
+if [ -n "${SSH_TTY:-}" ] && [ -z "${TMUX:-}" ]; then
+  case $- in
+    *i*) command -v zsh >/dev/null 2>&1 && exec zsh -l ;;
+  esac
+fi
+EOF
+    deploy_configuration "$temporary" "$target"
+    rm -f "$temporary"
+  done
+}
+
+warn_logout_policy() {
+  local configuration kill_user_processes
+  command -v systemd-analyze >/dev/null 2>&1 || return 0
+  configuration="$(systemd-analyze cat-config systemd/logind.conf 2>/dev/null)" || return 0
+  kill_user_processes="$(printf '%s\n' "$configuration" | awk -F= '
+    /^[[:space:]]*KillUserProcesses[[:space:]]*=/ {
+      value = $2
+      gsub(/[[:space:]]/, "", value)
+    }
+    END { print value }
+  ')"
+  case "$kill_user_processes" in
+    yes|true|1|on)
+      warn "Host logind sets KillUserProcesses=yes; tmux may be killed on SSH logout. Ask the administrator for a permitted persistence exception."
+      ;;
+  esac
+}
+
 ensure_codex() {
   local arch target temporary
 
@@ -287,6 +337,7 @@ fi
 chmod 600 "$HOME/.ssh/authorized_keys"
 
 deploy_configuration "$SCRIPT_DIR/zshrc" "$HOME/.zshrc"
+ensure_bash_ssh_startup
 deploy_configuration "$SCRIPT_DIR/vimrc" "$HOME/.vimrc"
 mkdir -p "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
@@ -297,6 +348,10 @@ for helper in tmux-codex-status tmux-next-ready claude-statusline; do
   chmod 755 "$HOME/.local/bin/$helper"
 done
 deploy_configuration "$SCRIPT_DIR/tmux.conf" "$HOME/.tmux.conf"
+if tmux list-sessions >/dev/null 2>&1; then
+  tmux source-file "$HOME/.tmux.conf"
+  log "Reloaded tmux configuration"
+fi
 if command -v codex >/dev/null 2>&1; then
   mkdir -p "$HOME/.codex"
   deploy_configuration "$SCRIPT_DIR/codex_config.toml" "$HOME/.codex/config.toml"
@@ -313,5 +368,6 @@ if command -v claude >/dev/null 2>&1; then
 fi
 
 ensure_vim_dependencies
+warn_logout_policy
 
 log "Terminal setup complete"

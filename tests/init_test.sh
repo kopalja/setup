@@ -50,6 +50,12 @@ make_fake_commands() {
   local fake_bin="$1"
 
   mkdir -p "$fake_bin"
+  # Keep installer scratch directories inside the fixture on macOS too.
+  write_fake_command "$fake_bin/mktemp" '
+if [[ "$*" == -d ]]; then
+  exec /usr/bin/mktemp -d "$HOME/.installer-tmp.XXXXXX"
+fi
+exec /usr/bin/mktemp "$@"'
   write_fake_command "$fake_bin/curl" '
 printf "curl %s\\n" "$*" >>"$SETUP_TEST_LOG"
 case "$*" in
@@ -655,6 +661,97 @@ test_tmux_helpers_are_installed_and_restored() {
   cleanup_fixture
 }
 
+test_bash_ssh_startup_preserves_profiles() {
+  local output status target
+  setup_fixture
+  printf '# existing bashrc\n' >"$TEST_HOME/.bashrc"
+  printf '# existing login profile\n' >"$TEST_HOME/.bash_profile"
+  output="$(run_setup 2>&1)"
+  status=$?
+  if ((status != 0)); then
+    fail "setup installs SSH startup ($output)"
+  else
+    for target in .bashrc .bash_profile; do
+      if ! grep -Fq '# existing' "$TEST_HOME/$target"; then
+        fail "preserves existing $target content"
+      fi
+      if ! compgen -G "$TEST_HOME/.setup-backups/*/$target" >/dev/null; then
+        fail "backs up existing $target"
+      fi
+    done
+    run_setup >/dev/null 2>&1
+    for target in .bashrc .bash_profile; do
+      if [[ "$(grep -Fc '# setup: SSH Zsh startup' "$TEST_HOME/$target")" != 1 ]]; then
+        fail "SSH startup is idempotent in $target"
+      fi
+    done
+    if [[ -e "$TEST_HOME/.profile" ]]; then
+      fail "uses the active login profile"
+    fi
+    write_fake_command "$TEST_FAKE_BIN/zsh" 'printf "zsh <%s>\n" "$*"'
+    for target in .bashrc .bash_profile; do
+      output="$(HOME="$TEST_HOME" PATH="$TEST_FAKE_BIN:/usr/bin:/bin" SSH_TTY=/dev/pts/1 TMUX= /bin/bash --noprofile --norc -ic 'source "$1"; echo continued' test "$TEST_HOME/$target" 2>&1)"
+      assert_contains "$output" 'zsh <-l>' "interactive SSH switches to Zsh ($target)"
+      assert_not_contains "$output" 'continued' "Zsh replaces the SSH Bash shell ($target)"
+    done
+    output="$(HOME="$TEST_HOME" PATH="$TEST_FAKE_BIN:/usr/bin:/bin" SSH_TTY=/dev/pts/1 TMUX= /bin/bash -c 'source "$HOME/.bashrc"; echo continued' 2>&1)"
+    assert_not_contains "$output" 'zsh <-l>' "noninteractive SSH does not launch Zsh"
+    assert_contains "$output" 'continued' "noninteractive SSH commands continue"
+    output="$(HOME="$TEST_HOME" PATH="$TEST_FAKE_BIN:/usr/bin:/bin" SSH_TTY= TMUX= /bin/bash --noprofile --norc -ic 'source "$HOME/.bashrc"; echo continued' 2>&1)"
+    assert_not_contains "$output" 'zsh <-l>' "local Bash stays Bash"
+    output="$(HOME="$TEST_HOME" PATH="$TEST_FAKE_BIN:/usr/bin:/bin" SSH_TTY=/dev/pts/1 TMUX=existing /bin/bash --noprofile --norc -ic 'source "$HOME/.bashrc"; echo continued' 2>&1)"
+    assert_not_contains "$output" 'zsh <-l>' "Bash inside tmux stays Bash"
+    pass "SSH startup preserves profiles and switches only interactive SSH shells"
+  fi
+  cleanup_fixture
+}
+
+test_setup_reports_logout_policy() {
+  local output status
+  setup_fixture
+  write_fake_command "$TEST_FAKE_BIN/systemd-analyze" 'printf "[Login]\nKillUserProcesses=no\nKillUserProcesses=yes\n"'
+  output="$(run_setup 2>&1)"
+  status=$?
+  if ((status != 0)); then
+    fail "setup checks logout policy ($output)"
+  else
+    assert_contains "$output" "Host logind sets KillUserProcesses=yes" "reports host logout policy"
+    write_fake_command "$TEST_FAKE_BIN/systemd-analyze" 'printf "[Login]\nKillUserProcesses=yes\nKillUserProcesses=no\n"'
+    output="$(run_setup 2>&1)"
+    assert_not_contains "$output" "Host logind sets KillUserProcesses=yes" "respects the last logind setting"
+    write_fake_command "$TEST_FAKE_BIN/systemd-analyze" 'exit 1'
+    if ! run_setup >/dev/null 2>&1; then
+      fail "unavailable logind configuration does not stop setup"
+    fi
+    pass "setup reports logout policy without changing it"
+  fi
+  cleanup_fixture
+}
+
+test_setup_reloads_running_tmux() {
+  local output status
+  setup_fixture
+  write_fake_command "$TEST_FAKE_BIN/tmux" 'printf "tmux %s\n" "$*" >>"$SETUP_TEST_LOG"'
+  output="$(run_setup 2>&1)"
+  status=$?
+  if ((status != 0)); then
+    fail "setup reloads tmux ($output)"
+  else
+    assert_contains "$(<"$TEST_LOG")" "tmux source-file $TEST_HOME/.tmux.conf" "reloads the running server"
+    : >"$TEST_LOG"
+    write_fake_command "$TEST_FAKE_BIN/tmux" 'printf "tmux %s\n" "$*" >>"$SETUP_TEST_LOG"; [[ "$*" != list-sessions ]]'
+    if ! run_setup >/dev/null 2>&1; then
+      fail "setup succeeds without a tmux server"
+    fi
+    assert_not_contains "$(<"$TEST_LOG")" "tmux source-file" "does not start a server to reload"
+    pass "setup reloads tmux only when a server is running"
+  fi
+  cleanup_fixture
+}
+
+test_setup_reloads_running_tmux
+test_setup_reports_logout_policy
+test_bash_ssh_startup_preserves_profiles
 test_tmux_helpers_are_installed_and_restored
 test_reports_all_missing_prerequisites
 test_ordinary_setup_run_acquires_only_missing_dependencies
