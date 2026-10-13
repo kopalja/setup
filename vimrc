@@ -35,7 +35,26 @@ let mapleader=" "
 let g:oscyank_max_length = 200000
 
 " Native yank (keeps p working) + send every yank to OSC52
-autocmd TextYankPost * if v:event.operator ==# "y" && exists("*OSCYank") | call OSCYank(join(v:event.regcontents, "\n")) | endif
+autocmd TextYankPost * if v:event.operator ==# "y" && exists("*OSCYank") | call OSCYank(join(v:event.regcontents, "\n") . (v:event.regtype ==# 'V' ? "\n" : '')) | endif
+
+" p always pastes the Mac clipboard: ask the terminal for it via tmux (OSC 52
+" read; Ghostty needs clipboard-read = allow) and load the reply into the
+" unnamed register. Keeps the current register if no reply arrives.
+function! MacClipboard() abort
+  if empty($TMUX) | return '' | endif
+  let l:cmd = "tmux list-buffers -F '#{buffer_name}'"
+  let l:old = get(systemlist(l:cmd), 0, '')
+  call system('tmux refresh-client -l')
+  for _ in range(10)
+    sleep 50m
+    if get(systemlist(l:cmd), 0, '') !=# l:old
+      call setreg('"', system('tmux save-buffer -'))
+      break
+    endif
+  endfor
+  return ''
+endfunction
+nnoremap <expr> p MacClipboard() . 'p'
 "===============================================
 
 " Change cursor in insert mode
@@ -49,7 +68,7 @@ let &t_EI = "\e[0 q"
 " Dont overdire clipboard with x and X
 noremap x "_x
 noremap X "_x
-xnoremap p pgvy
+xnoremap <expr> p MacClipboard() . 'pgvy'
 
 
 " Scroll faster
