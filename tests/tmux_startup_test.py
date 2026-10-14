@@ -74,8 +74,8 @@ class StartupTest(unittest.TestCase):
                 slave = -1
                 wait_for(lambda: bool(tmux("list-clients")))
                 wait_for(received.exists)
-                os.write(master, b"\t")
-                wait_for(lambda: received.read_bytes() == b"\t")
+                os.write(master, b"\x1b[98~\t")
+                wait_for(lambda: received.read_bytes() == b"\x1b[98~\t")
                 self.assertFalse(marker.exists(), "Tab must not open the popup")
                 os.write(master, b"\x1b[99~")
                 wait_for(marker.exists)

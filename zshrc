@@ -145,10 +145,12 @@ cwt-discard() {
 # ==========================================================================================
 
 # ===Fuzzy file and folde search===========================================================
-fuzzy-open() {
-    local selected
+_fuzzy-open() {
+    local walker=$1 root=$2 selected
+    shift 2
     selected=$(FZF_DEFAULT_COMMAND='' fzf \
-      --walker=file,dir,hidden \
+      --walker=$walker \
+      --walker-root=$root \
       --walker-skip=.git,.venv,.pyenv,.cache,.oh-my-zsh,.vs-code,.config,.vscode-server,.tmp,Library,node_modules \
       --tiebreak=length \
       --no-multi \
@@ -157,7 +159,8 @@ fuzzy-open() {
       --layout=default \
       --preview='if [ -d {} ]; then ls -la {}; else (batcat --style=numbers --color=always --theme=gruvbox-dark --line-range=:120 {} 2>/dev/null || head -n 120 {}); fi' \
       --preview-window='right:50%:wrap' \
-      --prompt='❯ ' < /dev/tty)
+      --prompt='❯ ' \
+      "$@" < /dev/tty)
     if [[ -n "$selected" ]]; then
       if [[ -d "$selected" ]]; then
         BUFFER="cd -- ${(q)selected}"
@@ -169,8 +172,13 @@ fuzzy-open() {
       zle reset-prompt
     fi
 }
+fuzzy-open() { _fuzzy-open file,dir,hidden . }
+fuzzy-dir-open() { _fuzzy-open dir,hidden "$HOME" --no-preview }
 zle -N fuzzy-open
+zle -N fuzzy-dir-open
 bindkey '^P' fuzzy-open
+# Ghostty sends this for Ctrl+; (keybind = ctrl+semicolon=text:\x1b[98~).
+bindkey '\e[98~' fuzzy-dir-open
 
 fuzzy-content-open() {
     local selected file line

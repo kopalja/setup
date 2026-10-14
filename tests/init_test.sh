@@ -442,9 +442,11 @@ test_installed_zsh_binds_fzf_history_search() {
   mkdir -p "$TEST_HOME/.local/bin"
   ln -s "$(command -v fzf)" "$TEST_HOME/.local/bin/fzf"
 
-  output="$(HOME="$TEST_HOME" PATH=/usr/bin:/bin "$REAL_ZSH" -ic 'bindkey "^R"' 2>&1)"
-  if assert_contains "$output" "fzf-history-widget" "Zsh binds Ctrl+R to fzf history search"; then
-    pass "installed Zsh configuration binds Ctrl+R to fzf history search"
+  output="$(HOME="$TEST_HOME" PATH=/usr/bin:/bin "$REAL_ZSH" -ic 'bindkey "^R"; bindkey "\e[98~"' 2>&1)"
+  if ! assert_contains "$output" "fzf-history-widget" "Zsh binds Ctrl+R to fzf history search"; then
+    :
+  elif assert_contains "$output" "fuzzy-dir-open" "Zsh binds Ctrl+; to fuzzy directory search"; then
+    pass "installed Zsh configuration binds Ctrl+R and Ctrl+; fuzzy searches"
   fi
 
   cleanup_fixture
@@ -454,10 +456,12 @@ test_fuzzy_pickers_search_current_directory() {
   local zsh_config
   zsh_config="$(<"$REPO_DIR/zshrc")"
 
-  if ! assert_not_contains "$zsh_config" "--walker-root" "Ctrl+P walks the current directory"; then
+  if ! assert_contains "$zsh_config" "fuzzy-open() { _fuzzy-open file,dir,hidden . }" "Ctrl+P walks the current directory"; then
+    :
+  elif ! assert_contains "$zsh_config" 'fuzzy-dir-open() { _fuzzy-open dir,hidden "$HOME" --no-preview }' "Ctrl+; walks directories under HOME"; then
     :
   elif assert_contains "$zsh_config" "-- {q} . || true" "Ctrl+O searches the current directory"; then
-    pass "fuzzy pickers search the current directory"
+    pass "fuzzy pickers search the current directory and HOME directories"
   fi
 }
 

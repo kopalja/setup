@@ -136,15 +136,22 @@ exception (particularly on Slurm hosts). Tmux settings cannot override that
 host policy. Setup checks the logind configuration when `systemd-analyze` is
 available and reports this setting; it does not change system policy.
 
-For the popup shortcut, add this to your **local Ghostty configuration** and
+For these shortcuts, add this to your **local Ghostty configuration** and
 reload Ghostty's configuration:
 
 ```ini
+# Ctrl+I: tmux popup
 keybind = ctrl+i=text:\x1b[99~
+# Ctrl+;: fuzzy search directories under $HOME
+keybind = ctrl+semicolon=text:\x1b[98~
+# Ctrl+[ / Ctrl+]: previous / next tmux window
+keybind = ctrl+bracket_left=text:\x1b[5;5~
+keybind = ctrl+bracket_right=text:\x1b[6;5~
 ```
 
-This sends a distinct sequence for Ctrl+I; Tab remains available for completion,
+These send distinct sequences, so Tab remains available for completion,
 including with older tmux versions. `Ctrl+B`, then `g`, also opens the popup.
+Ctrl+[ no longer acts as Esc; use the Esc key instead.
 
 To install a different SSH public key into `authorized_keys`, pass it with:
 
