@@ -19,6 +19,9 @@ plugins=(git tmux docker zsh-autosuggestions copybuffer)
 zstyle ':omz:update' mode disabled
 source "$ZSH/oh-my-zsh.sh"
 
+# Fuzzy history search (Ctrl+R), file (Ctrl+T) and directory (Alt+C) pickers.
+command -v fzf >/dev/null && source <(fzf --zsh)
+
 # Accept autosuggestions using Ctrl+Space
 bindkey "^@" autosuggest-execute
 
@@ -147,9 +150,6 @@ fuzzy-open() {
     selected=$(FZF_DEFAULT_COMMAND='' fzf \
       --walker=file,dir,hidden \
       --walker-skip=.git,.venv,.pyenv,.cache,.oh-my-zsh,.vs-code,.config,.vscode-server,.tmp,Library,node_modules \
-      --walker-root="$HOME" \
-      --delimiter="^$HOME/" \
-      --with-nth='~/{2..}' \
       --tiebreak=length \
       --no-multi \
       --height=70% \
@@ -178,16 +178,16 @@ fuzzy-content-open() {
       --ansi \
       --disabled \
       --no-sort \
-      --delimiter="^$HOME/|:" \
-      --with-nth='~/{2..}' \
+      --delimiter='^\./|:' \
+      --with-nth=2.. \
       --no-multi \
       --height=70% \
       --tmux=center,90%,90% \
       --layout=default \
-      --preview='[ -f "$HOME"/{2} ] || exit 0; batcat --style=numbers --color=always --theme=gruvbox-dark --highlight-line {3} "$HOME"/{2} 2>/dev/null || head -n 120 "$HOME"/{2}' \
+      --preview='[ -f {2} ] || exit 0; batcat --style=numbers --color=always --theme=gruvbox-dark --highlight-line {3} {2} 2>/dev/null || head -n 120 {2}' \
       --preview-window='right:50%:wrap:+{3}/2' \
       --prompt='❯ ' \
-      --bind='change:reload:test -n {q} && rg --sort path --line-number --no-heading --smart-case --glob="!.*" --glob="!{Library,node_modules}" -- {q} "$HOME/.zshrc" "$HOME/.vimrc" "$HOME/.tmux.conf" "$HOME" || true' < /dev/tty)
+      --bind='change:reload:test -n {q} && rg --sort path --line-number --no-heading --smart-case --glob="!.*" --glob="!{Library,node_modules}" -- {q} . || true' < /dev/tty)
     if [[ -n "$selected" ]]; then
       file=${selected%%:*}
       line=${${selected#*:}%%:*}
