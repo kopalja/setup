@@ -19,6 +19,9 @@ plugins=(git tmux docker zsh-autosuggestions copybuffer)
 zstyle ':omz:update' mode disabled
 source "$ZSH/oh-my-zsh.sh"
 
+# Fuzzy history search (Ctrl+R), file (Ctrl+T) and directory (Alt+C) pickers.
+command -v fzf >/dev/null && source <(fzf --zsh)
+
 # Accept autosuggestions using Ctrl+Space
 bindkey "^@" autosuggest-execute
 

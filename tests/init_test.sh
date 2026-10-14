@@ -434,6 +434,22 @@ test_installed_zsh_exposes_local_bin() {
   cleanup_fixture
 }
 
+test_installed_zsh_binds_fzf_history_search() {
+  local output
+  setup_fixture
+
+  run_setup >/dev/null 2>&1
+  mkdir -p "$TEST_HOME/.local/bin"
+  ln -s "$(command -v fzf)" "$TEST_HOME/.local/bin/fzf"
+
+  output="$(HOME="$TEST_HOME" PATH=/usr/bin:/bin "$REAL_ZSH" -ic 'bindkey "^R"' 2>&1)"
+  if assert_contains "$output" "fzf-history-widget" "Zsh binds Ctrl+R to fzf history search"; then
+    pass "installed Zsh configuration binds Ctrl+R to fzf history search"
+  fi
+
+  cleanup_fixture
+}
+
 test_codex_automatically_trusts_launch_directory() {
   local output expected target option
   setup_fixture
@@ -766,6 +782,7 @@ test_update_run_updates_codex_and_claude
 test_failed_copy_preserves_existing_configuration
 test_runtime_startup_has_no_dependency_side_effects
 test_installed_zsh_exposes_local_bin
+test_installed_zsh_binds_fzf_history_search
 test_codex_automatically_trusts_launch_directory
 test_installed_vim_configuration_parses
 test_installed_shell_configurations_parse
