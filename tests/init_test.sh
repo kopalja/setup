@@ -450,6 +450,17 @@ test_installed_zsh_binds_fzf_history_search() {
   cleanup_fixture
 }
 
+test_fuzzy_pickers_search_current_directory() {
+  local zsh_config
+  zsh_config="$(<"$REPO_DIR/zshrc")"
+
+  if ! assert_not_contains "$zsh_config" "--walker-root" "Ctrl+P walks the current directory"; then
+    :
+  elif assert_contains "$zsh_config" "-- {q} . || true" "Ctrl+O searches the current directory"; then
+    pass "fuzzy pickers search the current directory"
+  fi
+}
+
 test_codex_automatically_trusts_launch_directory() {
   local output expected target option
   setup_fixture
@@ -783,6 +794,7 @@ test_failed_copy_preserves_existing_configuration
 test_runtime_startup_has_no_dependency_side_effects
 test_installed_zsh_exposes_local_bin
 test_installed_zsh_binds_fzf_history_search
+test_fuzzy_pickers_search_current_directory
 test_codex_automatically_trusts_launch_directory
 test_installed_vim_configuration_parses
 test_installed_shell_configurations_parse
