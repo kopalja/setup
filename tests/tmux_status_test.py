@@ -199,6 +199,10 @@ class CompletionTest(unittest.TestCase):
                 self.assertEqual(value("#{@codex-finished}"), "1")
                 self.assertEqual(value("#{E:@tab-bg}"), "#3e6150")
                 self.assertEqual(value("#{E:@tab-title}"), "Fix bug")
+                tmux("select-pane", "-t", window, "-T", "✳ " + "x" * 60)
+                for fmt in ("window-status-format", "window-status-current-format"):
+                    self.assertIn(" " + "x" * 39 + "… ", value("#{E:" + fmt + "}"))
+                tmux("select-pane", "-t", window, "-T", "✳ Fix bug")
 
                 tmux("select-window", "-t", window)
                 self.assertEqual(value("#{@codex-finished}"), "0")
