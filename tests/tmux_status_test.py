@@ -60,7 +60,7 @@ class CompletionTest(unittest.TestCase):
                 title("⠋ Session title")
                 self.assertEqual(value("#{@codex-was-working}"), "1")
                 self.assertEqual(value("#{E:@tab-bg}"), "#654b70")
-                self.assertEqual(value("#{E:@active-tab-bg}"), "#ffbf00")
+                self.assertEqual(value("#{E:@active-tab-bg}"), "#d8a657")
                 self.assertNotIn("◐", value("#{E:@tab-number}"))
                 tmux("set-option", "-w", "-t", window, "monitor-bell", "on")
                 tmux("respawn-pane", "-k", "-t", window,
