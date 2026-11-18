@@ -8,6 +8,12 @@ call plug#end()
 
 set background=dark
 set termguicolors
+" Use terminal background
+autocmd ColorScheme * hi Normal guibg=NONE ctermbg=NONE
+      \ | hi NonText guibg=NONE ctermbg=NONE
+      \ | hi EndOfBuffer guibg=NONE ctermbg=NONE
+      \ | hi SignColumn guibg=NONE ctermbg=NONE
+      \ | hi LineNr guibg=NONE ctermbg=NONE
 if filereadable(expand('~/.vim/plugged/gruvbox/colors/gruvbox.vim'))
   colorscheme gruvbox
 endif
