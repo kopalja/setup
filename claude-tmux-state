@@ -1,0 +1,19 @@
+#!/bin/sh
+# Claude Code hook: set the @claude-working tmux pane option to 1, 0, or unset.
+# Sessions moved to the background with /bg run hooks outside tmux, so find
+# the panes attached to them by title, which is the session name.
+state=$1
+panes=$TMUX_PANE
+if [ -z "$panes" ] && [ -n "$CLAUDE_JOB_DIR" ]; then
+    name=$(jq -r '.name // empty' "$CLAUDE_JOB_DIR/state.json" 2>/dev/null)
+    name=${name:-$CLAUDE_CODE_SESSION_NAME}
+    [ -n "$name" ] && panes=$(tmux list-panes -a -F '#{pane_id} #{pane_title}' 2>/dev/null |
+        while read -r pane title; do [ "${title#✳ }" = "$name" ] && echo "$pane"; done)
+fi
+for pane in $panes; do
+    if [ "$state" = unset ]; then
+        tmux set-option -put "$pane" @claude-working
+    else
+        tmux set-option -pt "$pane" @claude-working "$state"
+    fi
+done

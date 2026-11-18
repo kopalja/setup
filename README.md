@@ -101,8 +101,9 @@ Commit the skill directory to share it with this repository's users. Run
 `./init.sh`) also installs them as part of the full setup. Codex and Claude
 Code discover user skills from their respective skill directories.
 
-Setup also copies `tmux-codex-status`, `tmux-next-ready`, and `claude-statusline`
-into `~/.local/bin/` and makes them executable, with the same backup behavior.
+Setup also copies `tmux-codex-status`, `tmux-next-ready`, `claude-statusline`,
+and `claude-tmux-state` into `~/.local/bin/` and makes them executable, with
+the same backup behavior.
 `claude-statusline` (requires `jq`) is the Claude Code status line: current dir,
 Git branch, model with reasoning effort, and context used, like Codex's.
 The tmux status bar shows a rotating half-filled circle on muted working tabs,
@@ -114,6 +115,9 @@ titles may require updating the detection in `tmux.conf`.
 Claude Code tabs behave the same way: the hooks in `claude_config.json` set
 the `@claude-working` tmux pane option (1 while working, 0 when done or
 waiting for input). Claude Code shows its session topic as the tab title.
+Sessions moved to the background with `/bg` run hooks outside tmux, so
+`claude-tmux-state` finds the panes attached to them by their title, which is
+the session name.
 
 Setup reloads the default tmux server if it is already running. To manually
 reload after editing the configuration:

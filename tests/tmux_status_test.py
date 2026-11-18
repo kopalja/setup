@@ -161,13 +161,14 @@ class CompletionTest(unittest.TestCase):
             def value(fmt):
                 return tmux("display-message", "-p", "-t", window, fmt)
 
-            def hook(event):
+            def hook(event, **extra):
                 # Run the configured hook as Claude Code would inside the pane.
                 for group in hooks[event]:
                     for entry in group["hooks"]:
-                        subprocess.run(entry["command"], shell=True, check=True,
+                        command = entry["command"].replace("~/.local/bin/", f"{repo}/")
+                        subprocess.run(command, shell=True, check=True,
                                        env={**env, "TMUX": socket + ",0,0",
-                                            "TMUX_PANE": pane})
+                                            "TMUX_PANE": pane, **extra})
                 subprocess.run([str(repo / "tmux-codex-status"), socket],
                                env=env, check=True, capture_output=True)
                 tmux("set-option", "-g", "@codex-pulse-frame", "0")
@@ -209,6 +210,23 @@ class CompletionTest(unittest.TestCase):
                 tmux("select-window", "-t", "test:0")
                 hook("SessionEnd")
                 self.assertEqual(value("#{E:@tab-title}"), name)
+                self.assertEqual(value("#{E:@tab-bg}"), "#444444")
+
+                # /bg sessions run hooks outside tmux; the attached pane is titled with the session name.
+                job = Path(tmp) / "job"
+                job.mkdir()
+                (job / "state.json").write_text(json.dumps({"name": "Fix bug"}))
+                bg = {"TMUX_PANE": "", "CLAUDE_JOB_DIR": str(job)}
+                tmux("select-pane", "-t", window, "-T", "Fix bug")
+                other = tmux("new-window", "-d", "-P", "-F", "#{pane_id}")
+                tmux("select-pane", "-t", other, "-T", "Other")
+                hook("UserPromptSubmit", **bg)
+                self.assertEqual(value("#{E:@tab-bg}"), "#654b70")
+                self.assertEqual(tmux("display-message", "-p", "-t", other, "#{@claude-working}"), "")
+                hook("Stop", **bg)
+                self.assertEqual(value("#{@claude-working}"), "0")
+                self.assertEqual(value("#{E:@tab-bg}"), "#3e6150")
+                hook("SessionEnd", **bg)
                 self.assertEqual(value("#{E:@tab-bg}"), "#444444")
             finally:
                 subprocess.run(["tmux", "-S", socket, "kill-server"], env=env,

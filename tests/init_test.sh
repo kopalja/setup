@@ -670,7 +670,7 @@ test_tmux_helpers_are_installed_and_restored() {
   if ((status != 0)); then
     fail "setup installs tmux helpers ($output)"
   else
-    for helper in tmux-codex-status tmux-next-ready claude-statusline; do
+    for helper in tmux-codex-status tmux-next-ready claude-statusline claude-tmux-state; do
       if ! cmp -s "$REPO_DIR/$helper" "$TEST_HOME/.local/bin/$helper" || [[ ! -x "$TEST_HOME/.local/bin/$helper" ]]; then
         fail "installs executable $helper"
       fi
