@@ -66,7 +66,7 @@ bindkey '^[l' forward-char
 alias c1="codex -m gpt-6-luna"
 alias c2="codex -m gpt-6.1-sol"
 alias c3="codex -m gpt-6-astra"
-_cc() { if [[ $1 == -* ]] || (( ! $# )); then claude "$@"; else claude -p "$*"; fi }
+_cc() { if [[ $1 == -* ]] || (( ! $# )); then claude "$@"; else claude -p --model haiku --effort medium "$*"; fi }
 alias cc='noglob _cc'
 # Enter on "cc <text>" quotes the text, so ', ", ; etc. need no escaping (flags like cc --resume pass through)
 _cc_accept_line() { [[ $BUFFER == cc\ [^-]* ]] && BUFFER="_cc ${(q)${BUFFER#cc }}"; zle .accept-line }
