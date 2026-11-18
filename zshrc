@@ -66,7 +66,11 @@ bindkey '^[l' forward-char
 alias c1="codex -m gpt-6-luna"
 alias c2="codex -m gpt-6.1-sol"
 alias c3="codex -m gpt-6-astra"
-alias cc="claude"
+_cc() { if [[ $1 == -* ]] || (( ! $# )); then claude "$@"; else claude -p "$*"; fi }
+alias cc='noglob _cc'
+# Enter on "cc <text>" quotes the text, so ', ", ; etc. need no escaping (flags like cc --resume pass through)
+_cc_accept_line() { [[ $BUFFER == cc\ [^-]* ]] && BUFFER="_cc ${(q)${BUFFER#cc }}"; zle .accept-line }
+zle -N accept-line _cc_accept_line
 alias cl="codex resume --last"
 alias ccl="claude -c"
 export EDITOR=/usr/bin/vim
