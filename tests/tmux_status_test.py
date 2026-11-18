@@ -232,6 +232,58 @@ class CompletionTest(unittest.TestCase):
                 subprocess.run(["tmux", "-S", socket, "kill-server"], env=env,
                                capture_output=True)
 
+    def test_agent_beside_focused_shell(self):
+        repo = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory(prefix="tmux-test-", dir=Path.home()) as tmp:
+            socket = str(Path(tmp) / "socket")
+            env = {k: v for k, v in os.environ.items() if k != "TMUX"}
+
+            def tmux(*args):
+                return subprocess.check_output(
+                    ["tmux", "-S", socket, *args], env=env, text=True
+                ).strip()
+
+            def value(fmt):
+                return tmux("display-message", "-p", "-t", window, fmt)
+
+            def tick():
+                subprocess.run([str(repo / "tmux-codex-status"), socket],
+                               env=env, check=True, capture_output=True)
+                tmux("set-option", "-g", "@codex-pulse-frame", "0")
+
+            def claude(state):
+                subprocess.run([str(repo / "claude-tmux-state"), state], check=True,
+                               env={**env, "TMUX": socket + ",0,0", "TMUX_PANE": agent})
+                tick()
+
+            try:
+                tmux("-f", "/dev/null", "new-session", "-d", "-s", "test")
+                tmux("source-file", str(repo / "tmux.conf"))
+                tmux("set-option", "-g", "status-right", "")
+                window = tmux("new-window", "-d", "-n", "shell", "-P", "-F", "#{window_id}")
+                agent = value("#{pane_id}")
+                tmux("select-pane", "-t", agent, "-T", "✳ Fix bug")
+                shell = tmux("split-window", "-h", "-d", "-t", window, "-P", "-F", "#{pane_id}")
+                tmux("select-pane", "-t", shell, "-T", "zsh")
+                tmux("select-pane", "-t", shell)
+                self.assertEqual(value("#{pane_id}"), shell)
+                self.assertEqual(value("#{E:@tab-title}"), "shell")
+
+                claude("1")
+                self.assertEqual(value("#{E:@tab-title}"), "◐ Fix bug")
+                self.assertEqual(value("#{E:@tab-bg}"), "#654b70")
+                claude("0")
+                self.assertEqual(value("#{E:@tab-title}"), "Fix bug")
+                self.assertEqual(value("#{@codex-finished}"), "1")
+                self.assertEqual(value("#{E:@tab-bg}"), "#3e6150")
+                claude("unset")
+                self.assertEqual(value("#{E:@tab-title}"), "shell")
+                self.assertEqual(value("#{@codex-finished}"), "0")
+                self.assertEqual(value("#{E:@tab-bg}"), "#444444")
+            finally:
+                subprocess.run(["tmux", "-S", socket, "kill-server"], env=env,
+                               capture_output=True)
+
 
 if __name__ == "__main__":
     unittest.main()
