@@ -8,6 +8,9 @@ call plug#end()
 
 set background=dark
 set termguicolors
+" Real italics even when terminfo lacks them (e.g. TERM=screen-256color), else comments render reversed
+let &t_ZH = "\e[3m"
+let &t_ZR = "\e[23m"
 " Use terminal background
 autocmd ColorScheme * hi Normal guibg=NONE ctermbg=NONE
       \ | hi NonText guibg=NONE ctermbg=NONE
