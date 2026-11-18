@@ -1,5 +1,5 @@
 call plug#begin('~/.vim/plugged')
-Plug 'gruvbox-community/gruvbox'
+Plug 'sainnhe/gruvbox-material'
 Plug 'ojroques/vim-oscyank', {'branch': 'main'}
 call plug#end()
 " -----------------------------------------------------------------------------
@@ -14,8 +14,11 @@ autocmd ColorScheme * hi Normal guibg=NONE ctermbg=NONE
       \ | hi EndOfBuffer guibg=NONE ctermbg=NONE
       \ | hi SignColumn guibg=NONE ctermbg=NONE
       \ | hi LineNr guibg=NONE ctermbg=NONE
-if filereadable(expand('~/.vim/plugged/gruvbox/colors/gruvbox.vim'))
-  colorscheme gruvbox
+let g:gruvbox_material_foreground = 'mix'
+let g:gruvbox_material_ui_contrast = 'high'
+let g:gruvbox_material_background = 'medium'
+if filereadable(expand('~/.vim/plugged/gruvbox-material/colors/gruvbox-material.vim'))
+  colorscheme gruvbox-material
 endif
 syntax on
 "----------------------------------------------------------------------
@@ -25,7 +28,7 @@ syntax on
 set laststatus=0
 set showtabline=2
 set tabline=%F\ %m%r%h%w%=%l,%c\ \ %p%%
-highlight TabLineFill guifg=#fbf1c7 guibg=#3c3836 gui=NONE ctermfg=230 ctermbg=237 cterm=NONE
+highlight TabLineFill guifg=#ddc7a1 guibg=#32302f gui=NONE ctermfg=223 ctermbg=236 cterm=NONE
 autocmd CursorMoved,CursorMovedI * redrawtabline
 "===============================================
 

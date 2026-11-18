@@ -98,7 +98,7 @@ fi'
   write_fake_command "$fake_bin/vim" '
 printf "vim %s\\n" "$*" >>"$SETUP_TEST_LOG"
 if [[ "$*" == *"PlugInstall"* || "$*" == *"PlugUpdate"* ]]; then
-  mkdir -p "$HOME/.vim/plugged/gruvbox/.git" "$HOME/.vim/plugged/vim-oscyank/.git"
+  mkdir -p "$HOME/.vim/plugged/gruvbox-material/.git" "$HOME/.vim/plugged/vim-oscyank/.git"
 fi'
   write_fake_command "$fake_bin/tar" '
 printf "tar %s\\n" "$*" >>"$SETUP_TEST_LOG"
@@ -398,7 +398,7 @@ test_runtime_startup_has_no_dependency_side_effects() {
     :
   elif ! assert_contains "$vim_config" "set termguicolors" "Vim enables true-color rendering"; then
     :
-  elif ! assert_contains "$vim_config" "colorscheme gruvbox" "Vim uses the Gruvbox color scheme"; then
+  elif ! assert_contains "$vim_config" "colorscheme gruvbox-material" "Vim uses the Gruvbox Material color scheme"; then
     :
   elif ! assert_contains "$vim_config" "autocmd TextYankPost" "Vim copies native yanks via OSC52"; then
     :
@@ -513,8 +513,8 @@ test_installed_vim_configuration_parses() {
   output="$(HOME="$TEST_HOME" "$REAL_VIM" -Nu "$TEST_HOME/.vimrc" -n -es -i NONE \
     -c 'call assert_equal(0, &laststatus, "bottom status line is hidden")' \
     -c 'call assert_equal(2, &showtabline, "top status bar stays visible in a single window")' \
-    -c 'call assert_equal("#fbf1c7", synIDattr(hlID("TabLineFill"), "fg", "gui"))' \
-    -c 'call assert_equal("#3c3836", synIDattr(hlID("TabLineFill"), "bg", "gui"))' \
+    -c 'call assert_equal("#ddc7a1", synIDattr(hlID("TabLineFill"), "fg", "gui"))' \
+    -c 'call assert_equal("#32302f", synIDattr(hlID("TabLineFill"), "bg", "gui"))' \
     -c 'if !empty(v:errors) | cquit | endif' -c 'qa' 2>&1)"
   status=$?
 
@@ -609,9 +609,9 @@ test_ordinary_setup_run_recovers_incomplete_vim_plugins() {
   local output status
   setup_fixture
   mkdir -p \
-    "$TEST_HOME/.vim/plugged/gruvbox" \
+    "$TEST_HOME/.vim/plugged/gruvbox-material" \
     "$TEST_HOME/.vim/plugged/vim-oscyank"
-  printf 'partial plugin\n' >"$TEST_HOME/.vim/plugged/gruvbox/partial"
+  printf 'partial plugin\n' >"$TEST_HOME/.vim/plugged/gruvbox-material/partial"
   printf 'partial plugin\n' >"$TEST_HOME/.vim/plugged/vim-oscyank/partial"
 
   output="$(run_setup 2>&1)"
@@ -619,11 +619,11 @@ test_ordinary_setup_run_recovers_incomplete_vim_plugins() {
 
   if ((status != 0)); then
     fail "ordinary Setup run recovers incomplete Vim plugins ($output)"
-  elif [[ ! -d "$TEST_HOME/.vim/plugged/gruvbox/.git" ]]; then
-    fail "reinstalls incomplete Gruvbox plugin"
+  elif [[ ! -d "$TEST_HOME/.vim/plugged/gruvbox-material/.git" ]]; then
+    fail "reinstalls incomplete Gruvbox Material plugin"
   elif [[ ! -d "$TEST_HOME/.vim/plugged/vim-oscyank/.git" ]]; then
     fail "reinstalls incomplete vim-oscyank plugin"
-  elif ! compgen -G "$TEST_HOME/.setup-backups/*/gruvbox" >/dev/null; then
+  elif ! compgen -G "$TEST_HOME/.setup-backups/*/gruvbox-material" >/dev/null; then
     fail "preserves incomplete Vim plugins before reinstalling"
   else
     pass "ordinary Setup run recovers incomplete Vim plugins"

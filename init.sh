@@ -238,7 +238,7 @@ ensure_vim_dependencies() {
   local plugin_dir
   local temporary
   local -a plugin_dirs=(
-    "$HOME/.vim/plugged/gruvbox"
+    "$HOME/.vim/plugged/gruvbox-material"
     "$HOME/.vim/plugged/vim-oscyank"
   )
 
